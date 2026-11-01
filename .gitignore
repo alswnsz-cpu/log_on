@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# 브레인스토밍 미리보기 임시 파일
+.superpowers/
+
+# 부원들의 실제 이메일이 들어 있는 일회용 이전 SQL (저장소에 올리지 않음)
+supabase/migrate_existing_accounts_*.sql
+supabase/seed_officer.sql
