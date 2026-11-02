@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { PHONE_RE } from '../auth/username'
@@ -227,6 +228,13 @@ export default function Profile() {
           </div>
         </form>
       </section>
+
+      {/* 탈퇴 신청은 내 정보 맨 아래에서만 보인다. 임원진은 먼저 부원으로 변경해야 해서 링크를 두지 않는다. */}
+      {profile?.role !== 'officer' && (
+        <footer className="app-footer">
+          <Link to="/withdraw">탈퇴 신청</Link>
+        </footer>
+      )}
     </>
   )
 }

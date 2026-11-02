@@ -48,11 +48,6 @@ export default function Layout({ locked = false }: { locked?: boolean }) {
       <main className="container">
         <Outlet />
       </main>
-      {!isOfficer && (
-        <footer className="app-footer">
-          <Link to="/withdraw">탈퇴 신청</Link>
-        </footer>
-      )}
     </>
   )
 }
