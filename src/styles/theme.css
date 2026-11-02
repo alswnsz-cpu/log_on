@@ -479,6 +479,42 @@ a.btn {
   display: block;
 }
 
+/* 공통 시간: 추천 목록은 스크롤 영역 안에서 고른다 */
+.pick-scroll {
+  max-height: min(420px, 55vh);
+  margin-top: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.pick-scroll .list {
+  margin-top: 0;
+}
+
+.pick-main {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.list li.pick-on {
+  border-color: var(--purple-600);
+  background: var(--purple-50);
+  box-shadow: 0 0 0 1px var(--purple-600);
+}
+
+.heat-cell.picked {
+  outline: 3px solid var(--purple-900);
+  outline-offset: -3px;
+}
+
 /* 되돌릴 수 없는 삭제 버튼 */
 .btn-danger {
   color: var(--danger);

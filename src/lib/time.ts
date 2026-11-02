@@ -3,6 +3,8 @@ export const DAY_START = 540 // 09:00
 export const DAY_END = 1080 // 18:00
 export const STEP = 30
 export const SLOT_COUNT = (DAY_END - DAY_START) / STEP // 18
+/** 공통 시간 추천은 이 시각(12:00) 이후에 시작하는 구간만 */
+export const RECOMMEND_FROM = 720
 
 export function minToHHMM(min: number): string {
   const h = Math.floor(min / 60)
@@ -101,10 +103,13 @@ export function findCandidates(
   availability: Availability,
   slotsNeeded: number,
   limit = 5,
+  /** 이 시각(분) 이전에 시작하는 구간은 추천하지 않는다. 기본은 하루의 처음부터 */
+  earliestStartMin = DAY_START,
 ): Candidate[] {
   const all: Candidate[] = []
+  const firstSlot = Math.max(0, Math.ceil((earliestStartMin - DAY_START) / STEP))
   for (let day = 0; day < DAY_LABELS.length; day++) {
-    for (let from = 0; from + slotsNeeded <= SLOT_COUNT; from++) {
+    for (let from = firstSlot; from + slotsNeeded <= SLOT_COUNT; from++) {
       const available = members.filter((m) => {
         const row = availability.busy.get(m.id)![day]
         for (let s = from; s < from + slotsNeeded; s++) if (row[s]) return false

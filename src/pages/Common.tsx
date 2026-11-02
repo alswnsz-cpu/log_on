@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   DAY_LABELS,
+  RECOMMEND_FROM,
   STEP,
   computeAvailability,
   daySlots,
@@ -45,6 +46,8 @@ export default function Common() {
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState(60)
   const [copied, setCopied] = useState<number | null>(null)
+  /** 추천 목록에서 고른 시간 (시간대 표에 표시된다) */
+  const [pickedKey, setPickedKey] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -70,10 +73,13 @@ export default function Common() {
   }, [])
 
   const availability = useMemo(() => computeAvailability(members, blocks), [members, blocks])
+  // 12:00 이후에 시작하는 시간만, 개수 제한 없이 모두 추천한다 (목록을 스크롤하며 고른다)
   const candidates = useMemo(
-    () => findCandidates(members, availability, duration / STEP),
+    () => findCandidates(members, availability, duration / STEP, 500, RECOMMEND_FROM),
     [members, availability, duration],
   )
+  const candidateKey = (c: Candidate) => `${c.day}-${c.startMin}`
+  const picked = candidates.find((c) => candidateKey(c) === pickedKey) ?? null
 
   async function copyText(c: Candidate, i: number) {
     const text = `[동아리 모임] ${formatCandidate(c, members.length)}`
@@ -128,36 +134,51 @@ export default function Common() {
       </section>
 
       <section className="card">
-        <h2>추천 시간</h2>
+        <h2>추천 시간 {candidates.length > 0 && `(${candidates.length})`}</h2>
+        <p className="hint">
+          {minToHHMM(RECOMMEND_FROM)} 이후에 시작하는 시간만 추천해요. 가능한 사람이 많은 순서예요. 목록을 위아래로 넘겨 보며
+          하나를 눌러 고르면 아래 시간대 표에 표시돼요.
+        </p>
         {candidates.length === 0 ? (
-          <p>{DURATIONS.find((d) => d.min === duration)?.label} 동안 가능한 시간이 없습니다.</p>
+          <p style={{ marginTop: 8 }}>
+            {minToHHMM(RECOMMEND_FROM)} 이후에 {DURATIONS.find((d) => d.min === duration)?.label} 동안 가능한 시간이 없습니다.
+          </p>
         ) : (
-          <ul className="list">
-            {candidates.map((c, i) => {
-              const all = c.available.length === total
-              const absent = members.filter((m) => !c.available.includes(m))
-              return (
-                <li key={`${c.day}-${c.startMin}`}>
-                  <span>
-                    <span className="name">
-                      {DAY_LABELS[c.day]}요일 {minToHHMM(c.startMin)}~{minToHHMM(c.endMin)}
-                      <span className={`badge ${all ? 'ok' : ''}`}>
-                        {all ? '전원 가능' : `${c.available.length}/${total}명`}
+          <div className="pick-scroll" role="listbox" aria-label="추천 시간 목록">
+            <ul className="list">
+              {candidates.map((c, i) => {
+                const all = c.available.length === total
+                const absent = members.filter((m) => !c.available.includes(m))
+                const on = picked !== null && candidateKey(picked) === candidateKey(c)
+                return (
+                  <li key={candidateKey(c)} className={on ? 'pick-on' : undefined}>
+                    <button
+                      type="button"
+                      className="pick-main"
+                      role="option"
+                      aria-selected={on}
+                      onClick={() => setPickedKey(on ? null : candidateKey(c))}
+                    >
+                      <span className="name">
+                        {DAY_LABELS[c.day]}요일 {minToHHMM(c.startMin)}~{minToHHMM(c.endMin)}
+                        <span className={`badge ${all ? 'ok' : ''}`}>
+                          {all ? '전원 가능' : `${c.available.length}/${total}명`}
+                        </span>
                       </span>
-                    </span>
-                    {!all && (
-                      <span className="hint" style={{ display: 'block' }}>
-                        불가: {absent.map((m) => m.name).join(', ')}
-                      </span>
-                    )}
-                  </span>
-                  <button className="btn btn-ghost btn-sm" onClick={() => copyText(c, i)}>
-                    {copied === i ? '복사됨' : '일정 문구 복사'}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+                      {!all && (
+                        <span className="hint" style={{ display: 'block' }}>
+                          불가: {absent.map((m) => m.name).join(', ')}
+                        </span>
+                      )}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => copyText(c, i)}>
+                      {copied === i ? '복사됨' : '일정 문구 복사'}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         )}
       </section>
 
@@ -179,10 +200,12 @@ export default function Common() {
                   <th className="time-label">{start % 60 === 0 ? minToHHMM(start) : ''}</th>
                   {DAY_LABELS.map((d, day) => {
                     const n = availability.free[day][slot]
+                    // 추천 목록에서 고른 시간이면 표시한다
+                    const inPick = picked !== null && picked.day === day && start >= picked.startMin && start < picked.endMin
                     return (
                       <td
                         key={d}
-                        className="cell heat-cell"
+                        className={inPick ? 'cell heat-cell picked' : 'cell heat-cell'}
                         style={{
                           background: `rgba(124, 58, 237, ${(n / total) * 0.85})`,
                           color: n / total > 0.5 ? '#fff' : 'var(--purple-900)',
@@ -198,7 +221,10 @@ export default function Common() {
             </tbody>
           </table>
         </div>
-        <p className="hint" style={{ marginTop: 8 }}>숫자는 해당 30분에 가능한 인원(전체 {total}명)입니다.</p>
+        <p className="hint" style={{ marginTop: 8 }}>
+          숫자는 해당 30분에 가능한 인원(전체 {total}명)입니다.
+          {picked && ` 굵은 테두리는 고른 시간(${DAY_LABELS[picked.day]}요일 ${minToHHMM(picked.startMin)}~${minToHHMM(picked.endMin)})이에요.`}
+        </p>
       </section>
     </>
   )
