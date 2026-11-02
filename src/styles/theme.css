@@ -457,6 +457,61 @@ a.btn {
   display: block;
 }
 
+/* 내 정보의 색상 고르기 */
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--purple-200);
+  cursor: pointer;
+}
+
+.color-swatch.on {
+  box-shadow: 0 0 0 3px var(--purple-900);
+}
+
+.color-swatch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 작성자 색 점과 범례 */
+.cal-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: baseline;
+  flex: none;
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cal-legend-item .cal-dot {
+  margin-right: 5px;
+}
+
 .cal-badge {
   margin-left: 6px;
   vertical-align: middle;

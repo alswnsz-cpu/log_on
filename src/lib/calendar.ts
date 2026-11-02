@@ -11,13 +11,55 @@ export interface CalendarEvent {
   repeat_weekly: boolean
   repeat_until: string | null
   skip_dates: string[]
+  /** 동아리 공식 일정(임원진만 작성) 여부. 아니면 부원의 개인 일정 */
+  is_club: boolean
+  created_by: string
+  profiles: { name: string; color: string | null; status: string } | null
 }
 
 /** 달력에 찍히는 하루치 일정. 반복 일정은 날짜마다 하나씩 펼쳐진다. */
 export type Occurrence = CalendarEvent & { occ_date: string }
 
 export const EVENT_COLUMNS =
-  'id, title, event_date, start_time, end_time, location, memo, repeat_weekly, repeat_until, skip_dates'
+  'id, title, event_date, start_time, end_time, location, memo, repeat_weekly, repeat_until, skip_dates, ' +
+  'is_club, created_by, profiles(name, color, status)'
+
+/** 부원이 고를 수 있는 색 12가지. DB의 profiles_color_check 와 같은 값이어야 한다. (흰 글자가 읽히는 진한 색) */
+export const MEMBER_COLORS = [
+  { hex: '#dc2626', name: '빨강' },
+  { hex: '#c2410c', name: '주황' },
+  { hex: '#a16207', name: '황토' },
+  { hex: '#4d7c0f', name: '연두' },
+  { hex: '#15803d', name: '초록' },
+  { hex: '#0f766e', name: '청록' },
+  { hex: '#0e7490', name: '하늘' },
+  { hex: '#2563eb', name: '파랑' },
+  { hex: '#1e3a8a', name: '남색' },
+  { hex: '#db2777', name: '분홍' },
+  { hex: '#831843', name: '자주' },
+  { hex: '#78716c', name: '회색' },
+] as const
+
+/** 동아리 공식 일정의 색 (앱의 보라색 테마) */
+export const CLUB_COLOR = '#8b5cf6'
+
+/** 색을 아직 안 고른 부원에게 보여 줄 자동 색. 같은 사람은 항상 같은 색이 나온다. */
+export function autoColor(userId: string): string {
+  let h = 0
+  for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0
+  return MEMBER_COLORS[h % MEMBER_COLORS.length].hex
+}
+
+/** 일정에 쓸 색: 공식 일정은 보라색, 개인 일정은 작성자가 고른 색(없으면 자동 색) */
+export function eventColor(e: Pick<CalendarEvent, 'is_club' | 'created_by' | 'profiles'>): string {
+  if (e.is_club) return CLUB_COLOR
+  return e.profiles?.color ?? autoColor(e.created_by)
+}
+
+/** 작성자 이름. 탈퇴했거나 읽을 수 없으면 "탈퇴한 부원" */
+export function ownerName(e: Pick<CalendarEvent, 'profiles'>): string {
+  return e.profiles && e.profiles.status !== 'removed' ? e.profiles.name : '탈퇴한 부원'
+}
 
 export const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 

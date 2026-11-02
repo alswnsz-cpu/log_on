@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { PHONE_RE } from '../auth/username'
+import { MEMBER_COLORS, autoColor } from '../lib/calendar'
 
 export default function Profile() {
   const { session, profile, refreshProfile } = useAuth()
@@ -13,6 +14,12 @@ export default function Profile() {
   const [infoError, setInfoError] = useState<string | null>(null)
   const [infoOk, setInfoOk] = useState(false)
   const [infoBusy, setInfoBusy] = useState(false)
+
+  // 달력에서 내 일정에 쓰는 색 (null 이면 자동 색)
+  const [color, setColor] = useState<string | null>(null)
+  const [colorLoaded, setColorLoaded] = useState(false)
+  const [colorError, setColorError] = useState<string | null>(null)
+  const [colorBusy, setColorBusy] = useState(false)
 
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -38,6 +45,33 @@ export default function Profile() {
       alive = false
     }
   }, [userId])
+
+  useEffect(() => {
+    let alive = true
+    supabase
+      .from('profiles')
+      .select('color')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!alive) return
+        setColor((data?.color as string | null) ?? null)
+        setColorLoaded(true)
+      })
+    return () => {
+      alive = false
+    }
+  }, [userId])
+
+  /** 색을 고르면 바로 저장한다. null 을 넘기면 자동 색으로 되돌린다. */
+  async function pickColor(next: string | null) {
+    setColorError(null)
+    setColorBusy(true)
+    const { error } = await supabase.rpc('update_my_color', { p_color: next })
+    setColorBusy(false)
+    if (error) return setColorError('색을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    setColor(next)
+  }
 
   async function saveInfo(e: FormEvent) {
     e.preventDefault()
@@ -115,6 +149,40 @@ export default function Profile() {
             <button className="btn" disabled={infoBusy || !phoneLoaded}>{infoBusy ? '저장 중...' : '저장'}</button>
           </div>
         </form>
+      </section>
+
+      <section className="card">
+        <h2>내 색상</h2>
+        <p className="hint" style={{ marginBottom: 10 }}>
+          달력에서 내 일정이 이 색으로 보여요. 색을 고르면 바로 저장됩니다.
+          {color === null && ' 지금은 자동으로 정해진 색을 쓰고 있어요.'}
+        </p>
+        <div className="color-picker" role="group" aria-label="내 색상">
+          {MEMBER_COLORS.map((c) => {
+            const on = (color ?? autoColor(userId)) === c.hex
+            return (
+              <button
+                type="button"
+                key={c.hex}
+                className={on ? 'color-swatch on' : 'color-swatch'}
+                style={{ background: c.hex }}
+                aria-label={c.name}
+                aria-pressed={on}
+                title={c.name}
+                disabled={!colorLoaded || colorBusy}
+                onClick={() => pickColor(c.hex)}
+              />
+            )
+          })}
+        </div>
+        {color !== null && (
+          <div className="actions">
+            <button type="button" className="btn btn-sm btn-ghost" disabled={colorBusy} onClick={() => pickColor(null)}>
+              자동 색으로 되돌리기
+            </button>
+          </div>
+        )}
+        {colorError && <p className="msg error" role="alert" style={{ marginTop: 10 }}>{colorError}</p>}
       </section>
 
       <section className="card">

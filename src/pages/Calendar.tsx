@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import {
+  CLUB_COLOR,
   EVENT_COLUMNS,
   MAX_REPEAT_DAYS,
   WEEKDAYS,
   addDays,
+  eventColor,
   expandEvents,
   formatDateKo,
   hhmm,
   monthGrid,
+  ownerName,
   sortOccurrences,
   timeRange,
   todayStr,
@@ -29,9 +32,11 @@ interface EventForm {
   repeat: boolean
   until: string
   skip: string[]
+  /** 동아리 공식 일정 (임원진만 선택할 수 있다) */
+  club: boolean
 }
 
-const emptyForm = (date: string): EventForm => ({
+const emptyForm = (date: string, club: boolean): EventForm => ({
   title: '',
   date,
   start: '',
@@ -41,11 +46,14 @@ const emptyForm = (date: string): EventForm => ({
   repeat: false,
   until: '',
   skip: [],
+  club,
 })
 
 export default function Calendar() {
   const { profile } = useAuth()
   const isOfficer = profile?.role === 'officer'
+  /** 임원진은 모든 일정을, 부원은 본인이 만든 일정만 고치거나 지울 수 있다. */
+  const canEdit = (e: CalendarEvent) => isOfficer || e.created_by === profile?.id
 
   const [today] = useState(todayStr)
   const [view, setView] = useState(() => {
@@ -89,8 +97,8 @@ export default function Calendar() {
         setLoadError('일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
       } else {
         setLoadError(null)
-        setEvents(a.data as CalendarEvent[])
-        setFutureEvents(b.data as CalendarEvent[])
+        setEvents(a.data as unknown as CalendarEvent[])
+        setFutureEvents(b.data as unknown as CalendarEvent[])
       }
       setLoading(false)
     })
@@ -116,6 +124,19 @@ export default function Calendar() {
 
   const dayEvents = byDate.get(selected) ?? []
 
+  // 범례: 이 달 달력에 일정이 있는 부원들의 색
+  const legend = useMemo(() => {
+    const owners = new Map<string, { name: string; color: string }>()
+    let hasClub = false
+    for (const list of byDate.values()) {
+      for (const o of list) {
+        if (o.is_club) hasClub = true
+        else if (!owners.has(o.created_by)) owners.set(o.created_by, { name: ownerName(o), color: eventColor(o) })
+      }
+    }
+    return { hasClub, owners: [...owners.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko')) }
+  }, [byDate])
+
   function goTo(date: string) {
     const [y, m] = date.split('-').map(Number)
     setView({ year: y, month0: m - 1 })
@@ -134,7 +155,7 @@ export default function Calendar() {
   function openAdd(date: string) {
     setEditingId(null)
     setFormError(null)
-    setForm(emptyForm(date))
+    setForm(emptyForm(date, isOfficer))
   }
 
   function openEdit(e: CalendarEvent) {
@@ -150,6 +171,7 @@ export default function Calendar() {
       repeat: e.repeat_weekly,
       until: e.repeat_until ?? '',
       skip: [...e.skip_dates].sort(),
+      club: e.is_club,
     })
   }
 
@@ -189,13 +211,15 @@ export default function Calendar() {
       repeat_weekly: form.repeat,
       repeat_until: form.repeat ? form.until : null,
       skip_dates: form.repeat ? form.skip : [],
+      // 공식 일정 여부는 임원진만 정한다. 부원은 보내지 않아도 개인 일정으로 저장된다.
+      ...(isOfficer ? { is_club: form.club } : {}),
     }
     const { error } =
       editingId === null
         ? await supabase.from('events').insert(row)
         : await supabase.from('events').update(row).eq('id', editingId)
     setSaving(false)
-    if (error) return setFormError('일정을 저장하지 못했습니다. 임원진 권한을 확인해 주세요.')
+    if (error) return setFormError('일정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
     closeForm()
     goTo(row.event_date)
     setReloadKey((k) => k + 1)
@@ -278,19 +302,35 @@ export default function Calendar() {
               >
                 <span className="cal-day">{c.day}</span>
                 {evs.slice(0, 2).map((e) => (
-                  <span key={e.id} className="cal-ev">{e.title}</span>
+                  <span key={e.id} className="cal-ev" style={{ background: eventColor(e) }}>{e.title}</span>
                 ))}
                 {evs.length > 2 && <span className="cal-more">+{evs.length - 2}</span>}
               </button>
             )
           })}
         </div>
+        {(legend.hasClub || legend.owners.length > 0) && (
+          <div className="cal-legend" aria-label="색 설명">
+            {legend.hasClub && (
+              <span className="cal-legend-item">
+                <i className="cal-dot" style={{ background: CLUB_COLOR }} />
+                동아리 공식
+              </span>
+            )}
+            {legend.owners.map((o) => (
+              <span key={o.name} className="cal-legend-item">
+                <i className="cal-dot" style={{ background: o.color }} />
+                {o.name}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="card">
         <div className="section-head">
           <h2>{formatDateKo(selected)}</h2>
-          {isOfficer && !form && (
+          {!form && (
             <button className="btn btn-sm" onClick={() => openAdd(selected)}>
               일정 추가
             </button>
@@ -306,15 +346,17 @@ export default function Calendar() {
             {dayEvents.map((o) => (
               <li key={`${o.id}-${o.occ_date}`}>
                 <span className="name cal-name">
+                  <i className="cal-dot" style={{ background: eventColor(o) }} />
                   {o.title}
+                  {o.is_club && <span className="badge cal-badge">공식</span>}
                   {o.repeat_weekly && <span className="badge cal-badge">매주</span>}
                   <span className="hint" style={{ display: 'block' }}>
-                    {timeRange(o)}
+                    {o.is_club ? '동아리' : ownerName(o)} · {timeRange(o)}
                     {o.location && <> · {o.location}</>}
                   </span>
                   {o.memo && <span className="hint cal-memo">{o.memo}</span>}
                 </span>
-                {isOfficer && (
+                {canEdit(o) && (
                   <span className="row-actions">
                     <button className="btn btn-sm btn-ghost" disabled={busyId === o.id} onClick={() => openEdit(o)}>
                       수정
@@ -335,7 +377,7 @@ export default function Calendar() {
         )}
       </section>
 
-      {isOfficer && form && (
+      {form && (
         <section className="card">
           <h2>{editingId === null ? '일정 추가' : '일정 수정'}</h2>
           <form className="form" onSubmit={save}>
@@ -345,9 +387,22 @@ export default function Calendar() {
                 value={form.title}
                 maxLength={100}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="예: 정기 모임"
+                placeholder={isOfficer ? '예: 정기 모임' : '예: 스터디, 시험, 동아리 불참'}
               />
             </label>
+            {isOfficer ? (
+              <label className="check-row">
+                <input type="checkbox" checked={form.club} onChange={(e) => setForm({ ...form, club: e.target.checked })} />
+                <span>
+                  동아리 공식 일정
+                  <span className="hint" style={{ display: 'block', fontWeight: 400 }}>
+                    체크하면 모든 부원에게 공식 일정(보라색)으로 보여요. 체크하지 않으면 내 개인 일정이에요.
+                  </span>
+                </span>
+              </label>
+            ) : (
+              <p className="hint">내 일정은 모든 부원에게 내 색으로 보여요.</p>
+            )}
             <label>
               날짜 (반복이면 시작 날짜)
               <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -434,10 +489,12 @@ export default function Calendar() {
               <li key={`${o.id}-${o.occ_date}`}>
                 <button type="button" className="cal-upcoming" onClick={() => goTo(o.occ_date)}>
                   <span className="name cal-name">
+                    <i className="cal-dot" style={{ background: eventColor(o) }} />
                     {o.title}
+                    {o.is_club && <span className="badge cal-badge">공식</span>}
                     {o.repeat_weekly && <span className="badge cal-badge">매주</span>}
                     <span className="hint" style={{ display: 'block' }}>
-                      {formatDateKo(o.occ_date)} · {timeRange(o)}
+                      {o.is_club ? '동아리' : ownerName(o)} · {formatDateKo(o.occ_date)} · {timeRange(o)}
                       {o.location && <> · {o.location}</>}
                     </span>
                   </span>
