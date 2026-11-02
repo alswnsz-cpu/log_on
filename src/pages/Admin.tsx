@@ -85,6 +85,17 @@ function resetError(message: string): string {
   return RESET_ERRORS.find((m) => message.includes(m)) ?? '비밀번호를 재설정하지 못했습니다. 잠시 후 다시 시도해 주세요.'
 }
 
+const PURGE_ERRORS = [
+  '탈퇴했거나 거절된 계정만 완전 삭제할 수 있습니다.',
+  '임원진 권한이 있는 계정은 삭제할 수 없습니다. 먼저 부원으로 변경해 주세요.',
+  '이 사람이 만든 안건·결론·공식 일정이 남아 있어 삭제할 수 없습니다.',
+  '자기 자신은 삭제할 수 없습니다.',
+]
+
+function purgeError(message: string): string {
+  return PURGE_ERRORS.find((m) => message.includes(m)) ?? '삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+}
+
 const REMOVE_ERRORS = [
   '임원진은 먼저 부원으로 변경해 주세요.',
   '자기 자신은 탈퇴시킬 수 없습니다.',
@@ -166,6 +177,23 @@ export default function Admin() {
     const { error } = await supabase.rpc('remove_member', { p_user: p.id })
     setBusyId(null)
     if (error) setActionError(removeError(error.message))
+    await load()
+  }
+
+  /** 탈퇴하거나 거절된 계정을 완전히 지운다. 되돌릴 수 없어서 이름을 직접 입력해야 한다. */
+  async function purgeMember(p: Person) {
+    const typed = window.prompt(
+      `${p.name}님의 정보를 완전히 삭제합니다.\n계정, 아이디, 전화번호, 가입 신청서, 이 사람이 남긴 모든 의견이 사라지고 되돌릴 수 없습니다.\n\n삭제하려면 이름 "${p.name}"을(를) 그대로 입력하세요.`,
+    )
+    if (typed === null) return
+    if (typed.trim() !== p.name) return setActionError('입력한 이름이 달라서 삭제하지 않았습니다.')
+    setActionError(null)
+    setActionNotice(null)
+    setBusyId(p.id)
+    const { error } = await supabase.rpc('purge_member', { p_user: p.id })
+    setBusyId(null)
+    if (error) return setActionError(purgeError(error.message))
+    setActionNotice(`${p.name}님의 정보를 완전히 삭제했습니다.`)
     await load()
   }
 
@@ -408,6 +436,7 @@ export default function Admin() {
           <h2>탈퇴 ({removed.length})</h2>
           <p className="hint" style={{ marginBottom: 8 }}>
             다시 활동하려면 본인이 로그인해서 "복귀 신청"을 하면 승인 대기 목록에 나타납니다. 그때 승인해 주세요.
+            "완전 삭제"를 하면 계정과 가입 신청서, 남긴 의견이 모두 사라져요.
           </p>
           <ul className="list">
             {removed.map((p) => (
@@ -416,6 +445,11 @@ export default function Admin() {
                   {p.name} <span className="badge muted">{STATUS_LABEL.removed}</span>
                   <PersonMeta info={privates[p.id]} />
                   <ApplicationView app={applications[p.id]} open={false} />
+                </span>
+                <span className="row-actions">
+                  <button className="btn btn-sm btn-ghost btn-danger" disabled={busyId === p.id} onClick={() => purgeMember(p)}>
+                    완전 삭제
+                  </button>
                 </span>
               </li>
             ))}
@@ -437,6 +471,9 @@ export default function Admin() {
                 <span className="row-actions">
                   <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => update(p.id, { status: 'approved' })}>
                     다시 승인
+                  </button>
+                  <button className="btn btn-sm btn-ghost btn-danger" disabled={busyId === p.id} onClick={() => purgeMember(p)}>
+                    완전 삭제
                   </button>
                 </span>
               </li>

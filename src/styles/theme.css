@@ -479,6 +479,15 @@ a.btn {
   display: block;
 }
 
+/* 되돌릴 수 없는 삭제 버튼 */
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: #fee2e2;
+}
+
 /* 끌어서 순서 바꾸는 목록(관리 화면의 부원) */
 .sort-main {
   display: flex;
