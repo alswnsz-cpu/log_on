@@ -3,7 +3,8 @@ import { useAuth } from '../auth/useAuth'
 import Brand, { APP_TAGLINE } from './Brand'
 
 const links = [
-  { to: '/', label: '내 시간표', end: true },
+  { to: '/', label: '달력', end: true },
+  { to: '/schedule', label: '내 시간표' },
   { to: '/common', label: '공통 시간' },
   { to: '/agendas', label: '토론' },
   { to: '/decisions', label: '결론' },
@@ -13,7 +14,7 @@ const links = [
 export default function Layout({ locked = false }: { locked?: boolean }) {
   const { profile, signOut } = useAuth()
   const isOfficer = profile?.role === 'officer'
-  const shown = locked ? links.slice(0, 1) : links
+  const shown = locked ? links.filter((l) => l.to === '/schedule') : links
 
   return (
     <>

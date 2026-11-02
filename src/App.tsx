@@ -6,6 +6,7 @@ import { useAuth } from './auth/useAuth'
 import AuthScreen from './auth/AuthScreen'
 import StatusScreen from './auth/StatusScreen'
 import Layout from './components/Layout'
+import Calendar from './pages/Calendar'
 import Schedule from './pages/Schedule'
 import Common from './pages/Common'
 import Agendas from './pages/Agendas'
@@ -65,9 +66,10 @@ function ApprovedApp({ userId }: { userId: string }) {
   return (
     <Routes>
       <Route element={<Layout locked={!done} />}>
-        <Route index element={<Schedule done={done} onComplete={complete} />} />
+        <Route path="schedule" element={<Schedule done={done} onComplete={complete} />} />
         {done && (
           <>
+            <Route index element={<Calendar />} />
             <Route path="common" element={<Common />} />
             <Route path="agendas" element={<Agendas />} />
             <Route path="agendas/:id" element={<AgendaDetail />} />
@@ -77,7 +79,7 @@ function ApprovedApp({ userId }: { userId: string }) {
         <Route path="admin" element={<Admin />} />
         <Route path="withdraw" element={<Withdraw />} />
         <Route path="profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={done ? '/' : '/schedule'} replace />} />
       </Route>
     </Routes>
   )

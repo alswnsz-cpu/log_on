@@ -34,3 +34,5 @@ dist-ssr
 # 부원들의 실제 이메일이 들어 있는 일회용 이전 SQL (저장소에 올리지 않음)
 supabase/migrate_existing_accounts_*.sql
 supabase/seed_officer.sql
+
+.vercel
