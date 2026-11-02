@@ -479,6 +479,61 @@ a.btn {
   display: block;
 }
 
+/* 끌어서 순서 바꾸는 목록(관리 화면의 부원) */
+.sort-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sortable.is-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sortable-item {
+  position: relative;
+  background: #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sortable-item.dragging {
+  z-index: 5;
+  transition: none;
+  border-color: var(--purple-500);
+  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.35);
+  cursor: grabbing;
+}
+
+.drag-handle {
+  flex: none;
+  min-width: 32px;
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  letter-spacing: -3px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.drag-handle:hover,
+.drag-handle:focus-visible {
+  color: var(--purple-700);
+}
+
+.drag-handle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* 내 정보의 색상 고르기 */
 .color-picker {
   display: flex;

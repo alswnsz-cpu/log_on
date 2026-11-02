@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import type { Profile, Role, Status } from '../auth/context'
+import SortableList from '../components/SortableList'
+
+/** 관리 화면에서 읽는 부원 정보: 기본 정보 + 임원진이 정한 순서 */
+type Person = Profile & { sort_order: number | null }
 import { formatDateTime } from '../lib/agendas'
 import { INTEREST_LABEL } from '../auth/application'
 import type { Application, InterestKey } from '../auth/application'
@@ -93,7 +97,7 @@ function removeError(message: string): string {
 
 export default function Admin() {
   const { profile: me } = useAuth()
-  const [people, setPeople] = useState<Profile[]>([])
+  const [people, setPeople] = useState<Person[]>([])
   const [privates, setPrivates] = useState<Record<string, { username: string | null; phone: string | null }>>({})
   const [applications, setApplications] = useState<Record<string, Application>>({})
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([])
@@ -108,12 +112,12 @@ export default function Admin() {
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, role, status')
+      .select('id, name, role, status, sort_order')
       .order('created_at', { ascending: true })
     if (error) setLoadError('목록을 불러오지 못했습니다.')
     else {
       setLoadError(null)
-      setPeople(data as Profile[])
+      setPeople(data as Person[])
     }
     // 아이디·전화번호는 임원진(과 본인)에게만 보이는 뷰에서 읽는다.
     const priv = await supabase.from('profile_private').select('id, username, phone')
@@ -162,6 +166,23 @@ export default function Admin() {
     const { error } = await supabase.rpc('remove_member', { p_user: p.id })
     setBusyId(null)
     if (error) setActionError(removeError(error.message))
+    await load()
+  }
+
+  /** 끌어서 정한 새 순서를 저장한다. 실패하면 목록이 원래 순서로 돌아간다. */
+  async function reorderMembers(ids: string[]) {
+    setActionError(null)
+    const { error } = await supabase.rpc('set_member_order', { p_ids: ids })
+    if (error) setActionError('순서를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    await load()
+  }
+
+  /** 정한 순서를 지우고 가입한 순서로 되돌린다. */
+  async function resetOrder() {
+    if (!window.confirm('부원 순서를 가입한 순서로 되돌릴까요?')) return
+    setActionError(null)
+    const { error } = await supabase.rpc('set_member_order', { p_ids: [] })
+    if (error) setActionError('순서를 되돌리지 못했습니다. 잠시 후 다시 시도해 주세요.')
     await load()
   }
 
@@ -223,15 +244,18 @@ export default function Admin() {
   }
 
   const pending = people.filter((p) => p.status === 'pending')
-  const approved = people.filter((p) => p.status === 'approved')
+  // 임원진이 정한 순서(작을수록 위). 순서가 없는 부원은 가입한 순서로 맨 아래에 붙는다.
+  const approved = people
+    .filter((p) => p.status === 'approved')
+    .sort((a, b) => (a.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.sort_order ?? Number.MAX_SAFE_INTEGER))
   const rejected = people.filter((p) => p.status === 'rejected')
   const removed = people.filter((p) => p.status === 'removed')
   const withdrawing = withdrawals
     .map((w) => ({ w, p: people.find((x) => x.id === w.user_id && x.status === 'approved' && x.role === 'member') }))
-    .filter((x): x is { w: WithdrawalRequest; p: Profile } => Boolean(x.p))
+    .filter((x): x is { w: WithdrawalRequest; p: Person } => Boolean(x.p))
   const resetting = resets
     .map((r) => ({ r, p: people.find((x) => x.id === r.user_id && x.status === 'approved') }))
-    .filter((x): x is { r: ResetRequest; p: Profile } => Boolean(x.p))
+    .filter((x): x is { r: ResetRequest; p: Person } => Boolean(x.p))
 
   return (
     <>
@@ -333,15 +357,32 @@ export default function Admin() {
       )}
 
       <section className="card">
-        <h2>부원 ({approved.length})</h2>
-        <ul className="list">
-          {approved.map((p) => (
-            <li key={p.id}>
-              <span className="name">
-                {p.name} <span className={p.role === 'officer' ? 'badge' : 'badge muted'}>{ROLE_LABEL[p.role]}</span>
-                {p.id === me.id && <span className="badge muted">나</span>}
-                <PersonMeta info={privates[p.id]} />
-                <ApplicationView app={applications[p.id]} open={false} />
+        <div className="section-head">
+          <h2>부원 ({approved.length})</h2>
+          {approved.some((p) => p.sort_order != null) && (
+            <button className="btn btn-sm btn-ghost" onClick={resetOrder}>
+              가입순으로 되돌리기
+            </button>
+          )}
+        </div>
+        <p className="hint" style={{ marginBottom: 4 }}>
+          왼쪽 ⋮⋮ 손잡이를 잡고 위아래로 끌어서 원하는 순서로 옮길 수 있어요. 놓으면 바로 저장돼요.
+        </p>
+        <SortableList
+          items={approved}
+          getId={(p) => p.id}
+          onReorder={reorderMembers}
+          label="부원"
+          renderItem={(p, handle) => (
+            <>
+              <span className="sort-main">
+                {handle}
+                <span className="name">
+                  {p.name} <span className={p.role === 'officer' ? 'badge' : 'badge muted'}>{ROLE_LABEL[p.role]}</span>
+                  {p.id === me.id && <span className="badge muted">나</span>}
+                  <PersonMeta info={privates[p.id]} />
+                  <ApplicationView app={applications[p.id]} open={false} />
+                </span>
               </span>
               <span className="row-actions">
                 <button
@@ -357,9 +398,9 @@ export default function Admin() {
                   </button>
                 )}
               </span>
-            </li>
-          ))}
-        </ul>
+            </>
+          )}
+        />
       </section>
 
       {removed.length > 0 && (
