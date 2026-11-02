@@ -15,11 +15,13 @@ export default function Profile() {
   const [infoOk, setInfoOk] = useState(false)
   const [infoBusy, setInfoBusy] = useState(false)
 
-  // 달력에서 내 일정에 쓰는 색 (null 이면 자동 색)
+  // 달력에서 내 일정에 쓰는 색. 색은 한 명만 쓸 수 있어서 다른 부원이 쓰는 색(색 → 이름)도 함께 불러온다.
   const [color, setColor] = useState<string | null>(null)
+  const [taken, setTaken] = useState<Record<string, string>>({})
   const [colorLoaded, setColorLoaded] = useState(false)
   const [colorError, setColorError] = useState<string | null>(null)
   const [colorBusy, setColorBusy] = useState(false)
+  const [colorReload, setColorReload] = useState(0)
 
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -50,26 +52,39 @@ export default function Profile() {
     let alive = true
     supabase
       .from('profiles')
-      .select('color')
-      .eq('id', userId)
-      .maybeSingle()
+      .select('id, name, color')
+      .eq('status', 'approved')
       .then(({ data }) => {
         if (!alive) return
-        setColor((data?.color as string | null) ?? null)
+        const others: Record<string, string> = {}
+        let mine: string | null = null
+        for (const p of (data ?? []) as { id: string; name: string; color: string | null }[]) {
+          if (p.id === userId) mine = p.color
+          else if (p.color) others[p.color] = p.name
+        }
+        setColor(mine)
+        setTaken(others)
         setColorLoaded(true)
       })
     return () => {
       alive = false
     }
-  }, [userId])
+  }, [userId, colorReload])
 
-  /** 색을 고르면 바로 저장한다. null 을 넘기면 자동 색으로 되돌린다. */
-  async function pickColor(next: string | null) {
+  /** 색을 고르면 바로 저장한다. 다른 부원이 먼저 쓴 색이면 막힌다. */
+  async function pickColor(next: string) {
     setColorError(null)
     setColorBusy(true)
     const { error } = await supabase.rpc('update_my_color', { p_color: next })
     setColorBusy(false)
-    if (error) return setColorError('색을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    if (error) {
+      setColorReload((k) => k + 1)
+      return setColorError(
+        error.message.includes('이미 다른 부원')
+          ? '방금 다른 부원이 이 색을 먼저 골랐어요. 다른 색을 골라 주세요.'
+          : '색을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      )
+    }
     setColor(next)
   }
 
@@ -154,32 +169,37 @@ export default function Profile() {
       <section className="card">
         <h2>내 색상</h2>
         <p className="hint" style={{ marginBottom: 10 }}>
-          달력에서 내 일정이 이 색으로 보여요. 색을 고르면 바로 저장됩니다.
-          {color === null && ' 지금은 자동으로 정해진 색을 쓰고 있어요.'}
+          달력에서 내 일정이 이 색으로 보여요. 색을 고르면 바로 저장됩니다. 흐리게 보이는 색은 다른 부원이 쓰고 있어서
+          고를 수 없어요.
+          {colorLoaded && color === null && ' 남은 색이 없어서 지금은 임시 색으로 보여요.'}
         </p>
         <div className="color-picker" role="group" aria-label="내 색상">
           {MEMBER_COLORS.map((c) => {
             const on = (color ?? autoColor(userId)) === c.hex
+            const owner = taken[c.hex]
             return (
               <button
                 type="button"
                 key={c.hex}
-                className={on ? 'color-swatch on' : 'color-swatch'}
+                className={on ? 'color-swatch on' : owner ? 'color-swatch taken' : 'color-swatch'}
                 style={{ background: c.hex }}
-                aria-label={c.name}
+                aria-label={owner ? `${c.name} (${owner}님이 사용 중)` : c.name}
                 aria-pressed={on}
-                title={c.name}
-                disabled={!colorLoaded || colorBusy}
+                title={owner ? `${owner}님이 사용 중` : c.name}
+                disabled={!colorLoaded || colorBusy || Boolean(owner)}
                 onClick={() => pickColor(c.hex)}
               />
             )
           })}
         </div>
-        {color !== null && (
-          <div className="actions">
-            <button type="button" className="btn btn-sm btn-ghost" disabled={colorBusy} onClick={() => pickColor(null)}>
-              자동 색으로 되돌리기
-            </button>
+        {Object.keys(taken).length > 0 && (
+          <div className="cal-legend" aria-label="다른 부원이 쓰는 색">
+            {MEMBER_COLORS.filter((c) => taken[c.hex]).map((c) => (
+              <span key={c.hex} className="cal-legend-item">
+                <i className="cal-dot" style={{ background: c.hex }} />
+                {taken[c.hex]}
+              </span>
+            ))}
           </div>
         )}
         {colorError && <p className="msg error" role="alert" style={{ marginTop: 10 }}>{colorError}</p>}
