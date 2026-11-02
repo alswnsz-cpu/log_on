@@ -575,6 +575,56 @@ a.btn {
   }
 }
 
+/* 시간표 "입력 완료" 고정 막대: 입력 완료 전에는 화면 아래에 항상 떠 있다 */
+.complete-spacer {
+  height: 96px;
+}
+
+.complete-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 2px solid var(--purple-500);
+  box-shadow: 0 -6px 18px rgba(124, 58, 237, 0.18);
+}
+
+.complete-bar-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.complete-bar-text {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 0.95rem;
+  color: var(--purple-900);
+}
+
+.complete-bar-text span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.complete-bar-btn {
+  flex: none;
+  padding: 12px 20px;
+  font-size: 1rem;
+}
+
+.complete-bar .msg {
+  max-width: 720px;
+  margin: 8px auto 0;
+}
+
 /* 화면 맨 아래 링크 (탈퇴 신청) */
 .app-footer {
   max-width: 720px;

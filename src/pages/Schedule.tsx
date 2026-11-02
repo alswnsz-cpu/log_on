@@ -219,8 +219,8 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
     <>
       {!done && (
         <p className="msg notice" role="status">
-          먼저 내 시간표를 입력해 주세요. 맨 아래 <b>입력 완료</b> 버튼을 눌러야 다른 메뉴를 쓸 수 있어요.
-          수업이 없으면 비워 두고 눌러도 됩니다.
+          먼저 내 시간표를 입력해 주세요. 다 입력했다면 화면 아래에 떠 있는 <b>입력 완료</b> 버튼을 눌러야 달력·토론·결론
+          같은 다른 메뉴가 열려요. 수업이 없으면 비워 두고 눌러도 됩니다.
         </p>
       )}
       <section className="card">
@@ -333,16 +333,22 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
       </section>
 
       {!done && (
-        <section className="card">
-          <h2>입력 완료</h2>
-          <p className="hint" style={{ marginBottom: 12 }}>
-            수업과 수시 불가 시간을 다 넣었다면 눌러 주세요. 누른 뒤에도 시간표는 언제든 고칠 수 있어요.
-          </p>
-          {completeError && <p className="msg error" role="alert" style={{ marginBottom: 12 }}>{completeError}</p>}
-          <button className="btn" disabled={completing || busy} onClick={complete}>
-            {completing ? '저장 중...' : '입력 완료'}
-          </button>
-        </section>
+        <>
+          {/* 고정 막대가 내용을 가리지 않도록 아래에 여백을 둔다 */}
+          <div className="complete-spacer" aria-hidden="true" />
+          <div className="complete-bar" role="region" aria-label="시간표 입력 완료">
+            <div className="complete-bar-inner">
+              <p className="complete-bar-text">
+                <b>시간표를 다 입력했나요?</b>
+                <span>누르면 달력·토론·결론이 열려요. 이후에도 시간표는 고칠 수 있어요.</span>
+              </p>
+              <button className="btn complete-bar-btn" disabled={completing || busy} onClick={complete}>
+                {completing ? '저장 중...' : '입력 완료'}
+              </button>
+            </div>
+            {completeError && <p className="msg error" role="alert">{completeError}</p>}
+          </div>
+        </>
       )}
     </>
   )
