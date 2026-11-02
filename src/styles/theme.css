@@ -457,6 +457,28 @@ a.btn {
   display: block;
 }
 
+.cal-badge {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* 체크박스 한 줄 (매주 반복) */
+.form label.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.form label.check-row input[type='checkbox'] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--purple-600);
+}
+
 .cal-memo {
   display: block;
   white-space: pre-wrap;

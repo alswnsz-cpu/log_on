@@ -3,15 +3,20 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import {
   EVENT_COLUMNS,
+  MAX_REPEAT_DAYS,
   WEEKDAYS,
+  addDays,
+  expandEvents,
   formatDateKo,
   hhmm,
   monthGrid,
-  sortEvents,
+  sortOccurrences,
   timeRange,
   todayStr,
+  weekdayKo,
   ymd,
   type CalendarEvent,
+  type Occurrence,
 } from '../lib/calendar'
 
 interface EventForm {
@@ -21,9 +26,22 @@ interface EventForm {
   end: string
   location: string
   memo: string
+  repeat: boolean
+  until: string
+  skip: string[]
 }
 
-const emptyForm = (date: string): EventForm => ({ title: '', date, start: '', end: '', location: '', memo: '' })
+const emptyForm = (date: string): EventForm => ({
+  title: '',
+  date,
+  start: '',
+  end: '',
+  location: '',
+  memo: '',
+  repeat: false,
+  until: '',
+  skip: [],
+})
 
 export default function Calendar() {
   const { profile } = useAuth()
@@ -36,7 +54,7 @@ export default function Calendar() {
   })
   const [selected, setSelected] = useState(today)
   const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [upcoming, setUpcoming] = useState<CalendarEvent[]>([])
+  const [futureEvents, setFutureEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -55,14 +73,16 @@ export default function Calendar() {
   useEffect(() => {
     let alive = true
     Promise.all([
-      supabase.from('events').select(EVENT_COLUMNS).gte('event_date', rangeStart).lte('event_date', rangeEnd),
+      // 이 달 달력에 걸리는 일정: 반복 없는 일정은 범위 안의 것, 반복 일정은 기간이 범위와 겹치는 것
       supabase
         .from('events')
         .select(EVENT_COLUMNS)
-        .gte('event_date', today)
-        .order('event_date')
-        .order('start_time', { nullsFirst: true })
-        .limit(5),
+        .or(
+          `and(repeat_weekly.eq.false,event_date.gte.${rangeStart},event_date.lte.${rangeEnd}),` +
+            `and(repeat_weekly.eq.true,event_date.lte.${rangeEnd},repeat_until.gte.${rangeStart})`,
+        ),
+      // 다가오는 일정: 오늘 이후에 한 번이라도 나오는 일정
+      supabase.from('events').select(EVENT_COLUMNS).or(`event_date.gte.${today},repeat_until.gte.${today}`),
     ]).then(([a, b]) => {
       if (!alive) return
       if (a.error || b.error) {
@@ -70,7 +90,7 @@ export default function Calendar() {
       } else {
         setLoadError(null)
         setEvents(a.data as CalendarEvent[])
-        setUpcoming(b.data as CalendarEvent[])
+        setFutureEvents(b.data as CalendarEvent[])
       }
       setLoading(false)
     })
@@ -80,14 +100,19 @@ export default function Calendar() {
   }, [rangeStart, rangeEnd, today, reloadKey])
 
   const byDate = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>()
-    for (const e of sortEvents(events)) {
-      const list = map.get(e.event_date) ?? []
-      list.push(e)
-      map.set(e.event_date, list)
+    const map = new Map<string, Occurrence[]>()
+    for (const o of sortOccurrences(expandEvents(events, rangeStart, rangeEnd))) {
+      const list = map.get(o.occ_date) ?? []
+      list.push(o)
+      map.set(o.occ_date, list)
     }
     return map
-  }, [events])
+  }, [events, rangeStart, rangeEnd])
+
+  const upcoming = useMemo(
+    () => sortOccurrences(expandEvents(futureEvents, today, addDays(today, 365))).slice(0, 5),
+    [futureEvents, today],
+  )
 
   const dayEvents = byDate.get(selected) ?? []
 
@@ -122,6 +147,9 @@ export default function Calendar() {
       end: hhmm(e.end_time),
       location: e.location ?? '',
       memo: e.memo ?? '',
+      repeat: e.repeat_weekly,
+      until: e.repeat_until ?? '',
+      skip: [...e.skip_dates].sort(),
     })
   }
 
@@ -143,6 +171,11 @@ export default function Calendar() {
     if (form.start && form.end && form.end <= form.start) return setFormError('종료 시간은 시작 시간보다 늦어야 합니다.')
     if (location.length > 100) return setFormError('장소는 100자 이하로 입력해 주세요.')
     if (memo.length > 1000) return setFormError('메모는 1000자 이하로 입력해 주세요.')
+    if (form.repeat) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.until)) return setFormError('반복이 끝나는 날짜를 선택해 주세요.')
+      if (form.until < form.date) return setFormError('끝나는 날짜는 시작 날짜보다 빠를 수 없어요.')
+      if (form.until > addDays(form.date, MAX_REPEAT_DAYS)) return setFormError('반복은 시작일로부터 최대 2년까지 설정할 수 있어요.')
+    }
 
     setFormError(null)
     setSaving(true)
@@ -153,6 +186,9 @@ export default function Calendar() {
       end_time: form.end || null,
       location: location || null,
       memo: memo || null,
+      repeat_weekly: form.repeat,
+      repeat_until: form.repeat ? form.until : null,
+      skip_dates: form.repeat ? form.skip : [],
     }
     const { error } =
       editingId === null
@@ -166,12 +202,27 @@ export default function Calendar() {
   }
 
   async function remove(e: CalendarEvent) {
-    if (!window.confirm(`"${e.title}" 일정을 삭제할까요? 되돌릴 수 없습니다.`)) return
+    const msg = e.repeat_weekly
+      ? `"${e.title}" 반복 일정 전체를 삭제할까요?\n지난 모임을 포함해 모든 날짜에서 사라지고 되돌릴 수 없습니다.`
+      : `"${e.title}" 일정을 삭제할까요? 되돌릴 수 없습니다.`
+    if (!window.confirm(msg)) return
     setActionError(null)
     setBusyId(e.id)
     const { error } = await supabase.from('events').delete().eq('id', e.id)
     setBusyId(null)
     if (error) return setActionError('일정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    setReloadKey((k) => k + 1)
+  }
+
+  /** 반복 일정에서 이 날짜 하루만 뺀다. 나머지 날짜는 그대로다. */
+  async function skipDay(o: Occurrence) {
+    if (!window.confirm(`${formatDateKo(o.occ_date)} 하루만 "${o.title}"에서 뺄까요?\n나머지 날짜는 그대로 남고, 수정 화면에서 되돌릴 수 있어요.`)) return
+    setActionError(null)
+    setBusyId(o.id)
+    const skip = [...new Set([...o.skip_dates, o.occ_date])].sort()
+    const { error } = await supabase.from('events').update({ skip_dates: skip }).eq('id', o.id)
+    setBusyId(null)
+    if (error) return setActionError('이 날짜를 빼지 못했습니다. 잠시 후 다시 시도해 주세요.')
     setReloadKey((k) => k + 1)
   }
 
@@ -252,23 +303,29 @@ export default function Calendar() {
           <p>이 날은 일정이 없습니다.</p>
         ) : (
           <ul className="list">
-            {dayEvents.map((e) => (
-              <li key={e.id}>
+            {dayEvents.map((o) => (
+              <li key={`${o.id}-${o.occ_date}`}>
                 <span className="name cal-name">
-                  {e.title}
+                  {o.title}
+                  {o.repeat_weekly && <span className="badge cal-badge">매주</span>}
                   <span className="hint" style={{ display: 'block' }}>
-                    {timeRange(e)}
-                    {e.location && <> · {e.location}</>}
+                    {timeRange(o)}
+                    {o.location && <> · {o.location}</>}
                   </span>
-                  {e.memo && <span className="hint cal-memo">{e.memo}</span>}
+                  {o.memo && <span className="hint cal-memo">{o.memo}</span>}
                 </span>
                 {isOfficer && (
                   <span className="row-actions">
-                    <button className="btn btn-sm btn-ghost" disabled={busyId === e.id} onClick={() => openEdit(e)}>
+                    <button className="btn btn-sm btn-ghost" disabled={busyId === o.id} onClick={() => openEdit(o)}>
                       수정
                     </button>
-                    <button className="btn btn-sm btn-ghost" disabled={busyId === e.id} onClick={() => remove(e)}>
-                      삭제
+                    {o.repeat_weekly && (
+                      <button className="btn btn-sm btn-ghost" disabled={busyId === o.id} onClick={() => skipDay(o)}>
+                        이 날만 빼기
+                      </button>
+                    )}
+                    <button className="btn btn-sm btn-ghost" disabled={busyId === o.id} onClick={() => remove(o)}>
+                      {o.repeat_weekly ? '전체 삭제' : '삭제'}
                     </button>
                   </span>
                 )}
@@ -292,7 +349,7 @@ export default function Calendar() {
               />
             </label>
             <label>
-              날짜
+              날짜 (반복이면 시작 날짜)
               <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             </label>
             <div className="time-row">
@@ -305,6 +362,44 @@ export default function Calendar() {
                 <input type="time" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} />
               </label>
             </div>
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={form.repeat}
+                onChange={(e) => setForm({ ...form, repeat: e.target.checked })}
+              />
+              <span>
+                매주 반복
+                {form.repeat && /^\d{4}-\d{2}-\d{2}$/.test(form.date) && (
+                  <span className="hint" style={{ display: 'block', fontWeight: 400 }}>
+                    매주 {weekdayKo(form.date)}요일마다 달력에 나와요.
+                  </span>
+                )}
+              </span>
+            </label>
+            {form.repeat && (
+              <label>
+                반복이 끝나는 날짜 (최대 2년)
+                <input type="date" value={form.until} onChange={(e) => setForm({ ...form, until: e.target.value })} />
+              </label>
+            )}
+            {form.repeat && form.skip.length > 0 && (
+              <div className="form-group">
+                <span className="form-group-title">뺀 날짜 (눌러서 되돌리기)</span>
+                <div className="day-picker">
+                  {form.skip.map((d) => (
+                    <button
+                      type="button"
+                      key={d}
+                      className="chip"
+                      onClick={() => setForm({ ...form, skip: form.skip.filter((x) => x !== d) })}
+                    >
+                      {formatDateKo(d)} ✕
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <label>
               장소 (선택)
               <input value={form.location} maxLength={100} onChange={(e) => setForm({ ...form, location: e.target.value })} />
@@ -313,6 +408,9 @@ export default function Calendar() {
               메모 (선택)
               <textarea value={form.memo} maxLength={1000} rows={3} onChange={(e) => setForm({ ...form, memo: e.target.value })} />
             </label>
+            {editingId !== null && form.repeat && (
+              <p className="hint">반복 일정을 수정하면 모든 날짜에 적용됩니다.</p>
+            )}
             {formError && <p className="msg error" role="alert">{formError}</p>}
             <div className="actions" style={{ marginTop: 0 }}>
               <button className="btn" disabled={saving}>{saving ? '저장 중...' : '저장'}</button>
@@ -332,14 +430,15 @@ export default function Calendar() {
           <p>다가오는 일정이 없습니다.</p>
         ) : (
           <ul className="list">
-            {upcoming.map((e) => (
-              <li key={e.id}>
-                <button type="button" className="cal-upcoming" onClick={() => goTo(e.event_date)}>
+            {upcoming.map((o) => (
+              <li key={`${o.id}-${o.occ_date}`}>
+                <button type="button" className="cal-upcoming" onClick={() => goTo(o.occ_date)}>
                   <span className="name cal-name">
-                    {e.title}
+                    {o.title}
+                    {o.repeat_weekly && <span className="badge cal-badge">매주</span>}
                     <span className="hint" style={{ display: 'block' }}>
-                      {formatDateKo(e.event_date)} · {timeRange(e)}
-                      {e.location && <> · {e.location}</>}
+                      {formatDateKo(o.occ_date)} · {timeRange(o)}
+                      {o.location && <> · {o.location}</>}
                     </span>
                   </span>
                 </button>
