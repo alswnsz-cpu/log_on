@@ -17,8 +17,25 @@ export interface CalendarEvent {
   profiles: { name: string; color: string | null; status: string } | null
 }
 
-/** 달력에 찍히는 하루치 일정. 반복 일정은 날짜마다 하나씩 펼쳐진다. */
-export type Occurrence = CalendarEvent & { occ_date: string }
+/** 반복 일정의 특정 날짜에만 적용되는 내용. 한 행이 그 날짜의 제목·시간·장소·메모 전체다. */
+export interface EventOverride {
+  event_id: number
+  occ_date: string
+  title: string
+  start_time: string | null
+  end_time: string | null
+  location: string | null
+  memo: string | null
+}
+
+export const OVERRIDE_COLUMNS = 'event_id, occ_date, title, start_time, end_time, location, memo'
+
+/**
+ * 달력에 찍히는 하루치 일정. 반복 일정은 날짜마다 하나씩 펼쳐진다.
+ * 그 날짜만 따로 수정했다면 overridden 이 true 이고 제목·시간·장소·메모는 수정한 내용이다.
+ * base 는 원래(전체에 적용되는) 일정이다.
+ */
+export type Occurrence = CalendarEvent & { occ_date: string; overridden: boolean; base: CalendarEvent }
 
 export const EVENT_COLUMNS =
   'id, title, event_date, start_time, end_time, location, memo, repeat_weekly, repeat_until, skip_dates, ' +
@@ -145,21 +162,44 @@ export function weekdayKo(date: string): string {
  * 일정들을 [rangeStart, rangeEnd] 날짜별 일정으로 펼친다.
  * 반복 일정은 시작일의 요일마다 한 개씩(끝나는 날짜까지, 뺀 날짜 제외) 만든다.
  */
-export function expandEvents(events: CalendarEvent[], rangeStart: string, rangeEnd: string): Occurrence[] {
+export function expandEvents(
+  events: CalendarEvent[],
+  rangeStart: string,
+  rangeEnd: string,
+  overrides: EventOverride[] = [],
+): Occurrence[] {
   const rs = toUtc(rangeStart)
   const re = toUtc(rangeEnd)
+  const byKey = new Map(overrides.map((o) => [`${o.event_id}|${o.occ_date}`, o]))
   const out: Occurrence[] = []
   for (const e of events) {
     const t0 = toUtc(e.event_date)
     if (!e.repeat_weekly || !e.repeat_until) {
-      if (t0 >= rs && t0 <= re) out.push({ ...e, occ_date: e.event_date })
+      if (t0 >= rs && t0 <= re) out.push({ ...e, occ_date: e.event_date, overridden: false, base: e })
       continue
     }
     const last = Math.min(toUtc(e.repeat_until), re)
     let t = t0 < rs ? t0 + Math.ceil((rs - t0) / (7 * DAY)) * 7 * DAY : t0
     for (; t <= last; t += 7 * DAY) {
       const date = fromUtc(t)
-      if (!e.skip_dates.includes(date)) out.push({ ...e, occ_date: date })
+      if (e.skip_dates.includes(date)) continue
+      const ov = byKey.get(`${e.id}|${date}`)
+      if (ov) {
+        // 그 날짜만 따로 수정한 내용으로 바꿔서 보여 준다
+        out.push({
+          ...e,
+          title: ov.title,
+          start_time: ov.start_time,
+          end_time: ov.end_time,
+          location: ov.location,
+          memo: ov.memo,
+          occ_date: date,
+          overridden: true,
+          base: e,
+        })
+      } else {
+        out.push({ ...e, occ_date: date, overridden: false, base: e })
+      }
     }
   }
   return out
