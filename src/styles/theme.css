@@ -1117,8 +1117,18 @@ textarea:focus {
     font-size: 0.75rem;
   }
 
+  /* 일정 제목은 한 줄에 …으로 자르지 않고 칸이 좁으면 두 줄까지 줄을 바꿔 보여 준다 */
   .cal-ev {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     padding: 2px 6px;
+    line-height: 1.3;
+    white-space: normal;
+    text-overflow: clip;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   /* 카드 목록(토론, 결론)은 2열로 */
@@ -1130,13 +1140,24 @@ textarea:focus {
 /* 가로로 눕힌 패드(넓은 화면): 달력과 시간표를 좌우 2단으로 나눈다 */
 @media (min-width: 1000px) {
   .cal-layout {
-    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2.3fr) minmax(0, 1fr);
     align-items: start;
   }
 
   .split-layout {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
     align-items: start;
+  }
+}
+
+/* 데스크톱처럼 아주 넓은 화면: 내용 폭을 더 넓혀 달력 칸이 충분히 크게 한다 */
+@media (min-width: 1200px) {
+  :root {
+    --page-max: 1180px;
+  }
+
+  .cal-cell {
+    min-height: 112px;
   }
 }
 
