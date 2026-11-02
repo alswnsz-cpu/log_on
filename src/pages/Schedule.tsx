@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
+import { useDialog } from '../components/dialog-context'
 import ScheduleGrid from '../components/ScheduleGrid'
 import type { MyBlock } from '../components/ScheduleGrid'
 import {
@@ -56,6 +57,7 @@ interface ScheduleProps {
 
 export default function Schedule({ done, onComplete }: ScheduleProps) {
   const { session } = useAuth()
+  const dialog = useDialog()
   const userId = session!.user.id
   const [completing, setCompleting] = useState(false)
   const [completeError, setCompleteError] = useState<string | null>(null)
@@ -146,7 +148,13 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
   }
 
   async function deleteClass(g: ClassGroup) {
-    if (!window.confirm(`"${g.subject}" 수업을 삭제할까요?`)) return
+    const ok = await dialog.confirm({
+      title: '수업 삭제',
+      message: `"${g.subject}" 수업을 삭제할까요?`,
+      confirmLabel: '삭제',
+      danger: true,
+    })
+    if (!ok) return
     setBusy(true)
     setError(null)
     const { error } = await supabase.from('schedule_blocks').delete().in('id', g.ids)
@@ -157,7 +165,13 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
   }
 
   async function resetSemester() {
-    if (!window.confirm('이번 학기 수업을 모두 삭제할까요? (수시 불가 시간은 유지됩니다)')) return
+    const ok = await dialog.confirm({
+      title: '학기 초기화',
+      message: '이번 학기 수업을 모두 삭제할까요? (수시 불가 시간은 유지됩니다)',
+      confirmLabel: '모두 삭제',
+      danger: true,
+    })
+    if (!ok) return
     setBusy(true)
     setError(null)
     const { error } = await supabase

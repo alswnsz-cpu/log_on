@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import type { Profile, Role, Status } from '../auth/context'
 import SortableList from '../components/SortableList'
+import { useDialog } from '../components/dialog-context'
 
 /** 관리 화면에서 읽는 부원 정보: 기본 정보 + 임원진이 정한 순서 */
 type Person = Profile & { sort_order: number | null }
@@ -108,6 +109,7 @@ function removeError(message: string): string {
 
 export default function Admin() {
   const { profile: me } = useAuth()
+  const dialog = useDialog()
   const [people, setPeople] = useState<Person[]>([])
   const [privates, setPrivates] = useState<Record<string, { username: string | null; phone: string | null }>>({})
   const [applications, setApplications] = useState<Record<string, Application>>({})
@@ -168,9 +170,12 @@ export default function Admin() {
   }
 
   async function removeMember(p: Profile) {
-    const ok = window.confirm(
-      `${p.name}님을 탈퇴시킬까요?\n시간표와 전화번호가 삭제되고 되돌릴 수 없습니다.\n남긴 의견은 "탈퇴한 부원"으로 남고, 가입 신청서는 유지됩니다.`,
-    )
+    const ok = await dialog.confirm({
+      title: '탈퇴 처리',
+      message: `${p.name}님을 탈퇴시킬까요?\n시간표와 전화번호가 삭제되고 되돌릴 수 없습니다.\n남긴 의견은 "탈퇴한 부원"으로 남고, 가입 신청서는 유지됩니다.`,
+      confirmLabel: '탈퇴시키기',
+      danger: true,
+    })
     if (!ok) return
     setActionError(null)
     setBusyId(p.id)
@@ -182,11 +187,13 @@ export default function Admin() {
 
   /** 탈퇴하거나 거절된 계정을 완전히 지운다. 되돌릴 수 없어서 이름을 직접 입력해야 한다. */
   async function purgeMember(p: Person) {
-    const typed = window.prompt(
-      `${p.name}님의 정보를 완전히 삭제합니다.\n계정, 아이디, 전화번호, 가입 신청서, 이 사람이 남긴 모든 의견이 사라지고 되돌릴 수 없습니다.\n\n삭제하려면 이름 "${p.name}"을(를) 그대로 입력하세요.`,
-    )
-    if (typed === null) return
-    if (typed.trim() !== p.name) return setActionError('입력한 이름이 달라서 삭제하지 않았습니다.')
+    const ok = await dialog.confirmTyping({
+      title: '완전 삭제',
+      message: `${p.name}님의 정보를 완전히 삭제합니다.\n계정, 아이디, 전화번호, 가입 신청서, 이 사람이 남긴 모든 의견이 사라지고 되돌릴 수 없습니다.`,
+      expected: p.name,
+      confirmLabel: '완전 삭제',
+    })
+    if (!ok) return
     setActionError(null)
     setActionNotice(null)
     setBusyId(p.id)
@@ -207,7 +214,7 @@ export default function Admin() {
 
   /** 정한 순서를 지우고 가입한 순서로 되돌린다. */
   async function resetOrder() {
-    if (!window.confirm('부원 순서를 가입한 순서로 되돌릴까요?')) return
+    if (!(await dialog.confirm({ title: '순서 되돌리기', message: '부원 순서를 가입한 순서로 되돌릴까요?', confirmLabel: '되돌리기' }))) return
     setActionError(null)
     const { error } = await supabase.rpc('set_member_order', { p_ids: [] })
     if (error) setActionError('순서를 되돌리지 못했습니다. 잠시 후 다시 시도해 주세요.')
@@ -220,7 +227,12 @@ export default function Admin() {
     setActionNotice(null)
     if (pw.length < 8) return setActionError('임시 비밀번호는 8자 이상으로 입력해 주세요.')
     if (pw.length > 72) return setActionError('임시 비밀번호는 72자 이하로 입력해 주세요.')
-    if (!window.confirm(`${p.name}님의 비밀번호를 입력한 임시 비밀번호로 바꿀까요?\n이 계정의 기존 로그인은 모두 풀립니다.`)) return
+    const ok = await dialog.confirm({
+      title: '비밀번호 재설정',
+      message: `${p.name}님의 비밀번호를 입력한 임시 비밀번호로 바꿀까요?\n이 계정의 기존 로그인은 모두 풀립니다.`,
+      confirmLabel: '재설정',
+    })
+    if (!ok) return
     setActionError(null)
     setBusyId(p.id)
     const { error } = await supabase.rpc('reset_member_password', { p_user: p.id, p_password: pw })
@@ -233,7 +245,12 @@ export default function Admin() {
 
   /** 재설정 요청을 지운다. 비밀번호는 바뀌지 않는다. */
   async function dismissReset(p: Profile) {
-    if (!window.confirm(`${p.name}님의 재설정 요청을 지울까요? 비밀번호는 바뀌지 않습니다.`)) return
+    const ok = await dialog.confirm({
+      title: '재설정 요청 지우기',
+      message: `${p.name}님의 재설정 요청을 지울까요? 비밀번호는 바뀌지 않습니다.`,
+      confirmLabel: '지우기',
+    })
+    if (!ok) return
     setActionError(null)
     setActionNotice(null)
     setBusyId(p.id)
@@ -245,7 +262,12 @@ export default function Admin() {
 
   /** 탈퇴 신청을 거절한다. 신청을 지우기만 하고 부원은 그대로 남는다. */
   async function rejectWithdrawal(p: Profile) {
-    if (!window.confirm(`${p.name}님의 탈퇴 신청을 거절할까요? 신청이 삭제되고 계속 부원으로 남습니다.`)) return
+    const ok = await dialog.confirm({
+      title: '탈퇴 신청 거절',
+      message: `${p.name}님의 탈퇴 신청을 거절할까요? 신청이 삭제되고 계속 부원으로 남습니다.`,
+      confirmLabel: '거절',
+    })
+    if (!ok) return
     setActionError(null)
     setBusyId(p.id)
     const { error } = await supabase.from('withdrawal_requests').delete().eq('user_id', p.id)

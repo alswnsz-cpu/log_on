@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useDialog } from '../components/dialog-context'
 import {
   DAY_LABELS,
   RECOMMEND_FROM,
@@ -39,6 +40,7 @@ async function fetchBusy(): Promise<{ data: BusyBlock[]; error: string | null }>
 }
 
 export default function Common() {
+  const dialog = useDialog()
   const [members, setMembers] = useState<Member[]>([])
   const [blocks, setBlocks] = useState<BusyBlock[]>([])
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
@@ -88,7 +90,8 @@ export default function Common() {
       setCopied(i)
       setTimeout(() => setCopied((cur) => (cur === i ? null : cur)), 1500)
     } catch {
-      window.prompt('아래 문구를 복사해 주세요.', text)
+      // 자동 복사가 막힌 브라우저에서는 글을 보여 주고 직접 복사하게 한다
+      await dialog.showText({ title: '일정 문구 복사', message: '아래 글을 선택해서 복사해 주세요.', text })
     }
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
+import { useDialog } from '../components/dialog-context'
 import { formatDateTime } from '../lib/agendas'
 
 interface WithdrawalRequest {
@@ -18,6 +19,7 @@ function fetchRequest(userId: string) {
 
 export default function Withdraw() {
   const { session, profile } = useAuth()
+  const dialog = useDialog()
   const userId = session!.user.id
   const [request, setRequest] = useState<WithdrawalRequest | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,12 +45,13 @@ export default function Withdraw() {
     e.preventDefault()
     const text = reason.trim()
     if (text.length > 200) return setError('사유는 200자 이하로 입력해 주세요.')
-    if (
-      !window.confirm(
-        '탈퇴를 신청할까요?\n임원진이 승인하면 시간표와 전화번호가 삭제되고, 남긴 의견은 "탈퇴한 부원"으로 표시됩니다.',
-      )
-    )
-      return
+    const ok = await dialog.confirm({
+      title: '탈퇴 신청',
+      message: '탈퇴를 신청할까요?\n임원진이 승인하면 시간표와 전화번호가 삭제되고, 남긴 의견은 "탈퇴한 부원"으로 표시됩니다.',
+      confirmLabel: '탈퇴 신청',
+      danger: true,
+    })
+    if (!ok) return
     setError(null)
     setBusy(true)
     const { error: err } = await supabase.from('withdrawal_requests').insert({ user_id: userId, reason: text || null })

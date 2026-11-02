@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
+import { useDialog } from '../components/dialog-context'
 import {
   CLUB_COLOR,
   EVENT_COLUMNS,
@@ -64,6 +65,7 @@ function useMinWidth(px: number): boolean {
 
 export default function Calendar() {
   const { profile } = useAuth()
+  const dialog = useDialog()
   // 날짜 칸에 보여 줄 일정 막대 수: 폰 2개, 패드 이상 3개
   const maxChips = useMinWidth(768) ? 3 : 2
   const isOfficer = profile?.role === 'officer'
@@ -244,7 +246,13 @@ export default function Calendar() {
     const msg = e.repeat_weekly
       ? `"${e.title}" 반복 일정 전체를 삭제할까요?\n지난 모임을 포함해 모든 날짜에서 사라지고 되돌릴 수 없습니다.`
       : `"${e.title}" 일정을 삭제할까요? 되돌릴 수 없습니다.`
-    if (!window.confirm(msg)) return
+    const ok = await dialog.confirm({
+      title: e.repeat_weekly ? '반복 일정 전체 삭제' : '일정 삭제',
+      message: msg,
+      confirmLabel: e.repeat_weekly ? '전체 삭제' : '삭제',
+      danger: true,
+    })
+    if (!ok) return
     setActionError(null)
     setBusyId(e.id)
     const { error } = await supabase.from('events').delete().eq('id', e.id)
@@ -255,7 +263,12 @@ export default function Calendar() {
 
   /** 반복 일정에서 이 날짜 하루만 뺀다. 나머지 날짜는 그대로다. */
   async function skipDay(o: Occurrence) {
-    if (!window.confirm(`${formatDateKo(o.occ_date)} 하루만 "${o.title}"에서 뺄까요?\n나머지 날짜는 그대로 남고, 수정 화면에서 되돌릴 수 있어요.`)) return
+    const ok = await dialog.confirm({
+      title: '이 날만 빼기',
+      message: `${formatDateKo(o.occ_date)} 하루만 "${o.title}"에서 뺄까요?\n나머지 날짜는 그대로 남고, 수정 화면에서 되돌릴 수 있어요.`,
+      confirmLabel: '빼기',
+    })
+    if (!ok) return
     setActionError(null)
     setBusyId(o.id)
     const skip = [...new Set([...o.skip_dates, o.occ_date])].sort()

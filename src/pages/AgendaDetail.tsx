@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import StanceBar from '../components/StanceBar'
+import { useDialog } from '../components/dialog-context'
 import {
   authorName,
   countStances,
@@ -36,6 +37,7 @@ export default function AgendaDetail() {
   const agendaId = Number(id)
   const navigate = useNavigate()
   const { profile } = useAuth()
+  const dialog = useDialog()
   const isOfficer = profile?.role === 'officer'
 
   const [agenda, setAgenda] = useState<Agenda | null>(null)
@@ -138,7 +140,9 @@ export default function AgendaDetail() {
   }
 
   async function deleteOpinion() {
-    if (!mine || !window.confirm('내 의견을 삭제할까요?')) return
+    if (!mine) return
+    const ok = await dialog.confirm({ title: '의견 삭제', message: '내 의견을 삭제할까요?', confirmLabel: '삭제', danger: true })
+    if (!ok) return
     setError(null)
     setBusy(true)
     const { error: err } = await supabase.from('opinions').delete().eq('id', mine.id)
@@ -169,7 +173,13 @@ export default function AgendaDetail() {
   }
 
   async function deleteAgenda() {
-    if (!window.confirm('이 토론과 모든 의견·결론을 삭제할까요? 되돌릴 수 없습니다.')) return
+    const ok = await dialog.confirm({
+      title: '토론 삭제',
+      message: '이 토론과 모든 의견·결론을 삭제할까요? 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })
+    if (!ok) return
     setBusy(true)
     const { error: err } = await supabase.from('agendas').delete().eq('id', agendaId)
     setBusy(false)
@@ -178,7 +188,12 @@ export default function AgendaDetail() {
   }
 
   async function reopenAgenda() {
-    if (!window.confirm('이 토론을 다시 진행할까요? 부원이 의견을 다시 쓸 수 있게 되고, 기존 결론은 "이전 결론"으로 남습니다.')) return
+    const ok = await dialog.confirm({
+      title: '토론 다시 진행',
+      message: '이 토론을 다시 진행할까요? 부원이 의견을 다시 쓸 수 있게 되고, 기존 결론은 "이전 결론"으로 남습니다.',
+      confirmLabel: '다시 진행',
+    })
+    if (!ok) return
     setError(null)
     setBusy(true)
     const { error: err } = await supabase.from('agendas').update({ status: 'discussing' }).eq('id', agendaId)
@@ -191,7 +206,14 @@ export default function AgendaDetail() {
     e.preventDefault()
     const text = decisionText.trim()
     if (text.length < 1 || text.length > 2000) return setError('결론은 1~2000자로 입력해 주세요.')
-    if (!locked && !window.confirm('결론을 확정하면 더 이상 의견을 쓸 수 없습니다. 확정할까요?')) return
+    if (!locked) {
+      const ok = await dialog.confirm({
+        title: '결론 확정',
+        message: '결론을 확정하면 더 이상 의견을 쓸 수 없습니다. 확정할까요?',
+        confirmLabel: '확정',
+      })
+      if (!ok) return
+    }
     setError(null)
     setBusy(true)
     const { error: err } = await supabase
