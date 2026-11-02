@@ -69,15 +69,17 @@ export default function Decisions() {
           <p>{rows.length === 0 ? '아직 확정된 토론이 없습니다.' : '검색 결과가 없습니다.'}</p>
         </section>
       ) : (
-        shown.map((r) => (
-          <Link key={r.agenda_id} to={`/agendas/${r.agenda_id}`} className="card agenda-card">
-            <h2>{r.agendas?.title ?? '(삭제된 토론)'}</h2>
-            <p className="decision-text">{r.content}</p>
-            <p className="hint">
-              {authorName(r.profiles)} · {formatDateTime(r.decided_at)}
-            </p>
-          </Link>
-        ))
+        <div className="card-grid">
+          {shown.map((r) => (
+            <Link key={r.agenda_id} to={`/agendas/${r.agenda_id}`} className="card agenda-card">
+              <h2>{r.agendas?.title ?? '(삭제된 토론)'}</h2>
+              <p className="decision-text">{r.content}</p>
+              <p className="hint">
+                {authorName(r.profiles)} · {formatDateTime(r.decided_at)}
+              </p>
+            </Link>
+          ))}
+        </div>
       )}
     </>
   )

@@ -223,6 +223,9 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
           같은 다른 메뉴가 열려요. 수업이 없으면 비워 두고 눌러도 됩니다.
         </p>
       )}
+      {/* 패드 가로 화면에서는 왼쪽 수업 입력·목록, 오른쪽 시간표 격자로 나뉜다 */}
+      <div className="split-layout">
+      <div>
       <section className="card">
         <h2>{editing ? '수업 수정' : '수업 추가'}</h2>
         <form className="form" onSubmit={saveClass}>
@@ -319,6 +322,8 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
         )}
       </section>
 
+      </div>
+      <div>
       <section className="card">
         <h2>내 시간표</h2>
         <p className="hint" style={{ marginBottom: 10 }}>
@@ -331,6 +336,8 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
         </div>
         <ScheduleGrid blocks={blocks} busy={busy} onToggleManual={toggleManual} />
       </section>
+      </div>
+      </div>
 
       {!done && (
         <>

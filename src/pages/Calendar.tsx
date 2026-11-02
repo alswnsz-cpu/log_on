@@ -49,8 +49,23 @@ const emptyForm = (date: string, club: boolean): EventForm => ({
   club,
 })
 
+/** 화면 폭이 px 이상인지(패드 이상인지)를 알려 준다. 화면 크기가 바뀌면 따라서 바뀐다. */
+function useMinWidth(px: number): boolean {
+  const query = `(min-width: ${px}px)`
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const onChange = () => setMatches(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [query])
+  return matches
+}
+
 export default function Calendar() {
   const { profile } = useAuth()
+  // 날짜 칸에 보여 줄 일정 막대 수: 폰 2개, 패드 이상 3개
+  const maxChips = useMinWidth(768) ? 3 : 2
   const isOfficer = profile?.role === 'officer'
   /** 임원진은 모든 일정을, 부원은 본인이 만든 일정만 고치거나 지울 수 있다. */
   const canEdit = (e: CalendarEvent) => isOfficer || e.created_by === profile?.id
@@ -254,6 +269,9 @@ export default function Calendar() {
     <>
       {loadError && <p className="msg error" role="alert">{loadError}</p>}
 
+      {/* 패드 가로 화면에서는 왼쪽 달력, 오른쪽 일정 목록으로 나뉜다 */}
+      <div className="cal-layout">
+      <div>
       <section className="card">
         <div className="section-head">
           <h2>
@@ -301,10 +319,10 @@ export default function Calendar() {
                 aria-pressed={c.date === selected}
               >
                 <span className="cal-day">{c.day}</span>
-                {evs.slice(0, 2).map((e) => (
+                {evs.slice(0, maxChips).map((e) => (
                   <span key={e.id} className="cal-ev" style={{ background: eventColor(e) }}>{e.title}</span>
                 ))}
-                {evs.length > 2 && <span className="cal-more">+{evs.length - 2}</span>}
+                {evs.length > maxChips && <span className="cal-more">+{evs.length - maxChips}</span>}
               </button>
             )
           })}
@@ -326,7 +344,9 @@ export default function Calendar() {
           </div>
         )}
       </section>
+      </div>
 
+      <div>
       <section className="card">
         <div className="section-head">
           <h2>{formatDateKo(selected)}</h2>
@@ -504,6 +524,8 @@ export default function Calendar() {
           </ul>
         )}
       </section>
+      </div>
+      </div>
     </>
   )
 }

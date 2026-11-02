@@ -124,19 +124,21 @@ export default function Agendas() {
           <p>{agendas.length === 0 ? '아직 등록된 토론이 없습니다.' : '해당 상태의 토론이 없습니다.'}</p>
         </section>
       ) : (
-        shown.map((a) => {
-          const c = counts[a.id] ?? { agree: 0, disagree: 0, hold: 0 }
-          return (
-            <Link key={a.id} to={`/agendas/${a.id}`} className="card agenda-card">
-              <div className="section-head">
-                <h2>{a.title}</h2>
-                <span className={a.status === 'decided' ? 'badge ok' : 'badge'}>{STATUS_LABEL[a.status]}</span>
-              </div>
-              <p className="hint">의견 {c.agree + c.disagree + c.hold}개</p>
-              <StanceBar counts={c} />
-            </Link>
-          )
-        })
+        <div className="card-grid">
+          {shown.map((a) => {
+            const c = counts[a.id] ?? { agree: 0, disagree: 0, hold: 0 }
+            return (
+              <Link key={a.id} to={`/agendas/${a.id}`} className="card agenda-card">
+                <div className="section-head">
+                  <h2>{a.title}</h2>
+                  <span className={a.status === 'decided' ? 'badge ok' : 'badge'}>{STATUS_LABEL[a.status]}</span>
+                </div>
+                <p className="hint">의견 {c.agree + c.disagree + c.hold}개</p>
+                <StanceBar counts={c} />
+              </Link>
+            )
+          })}
+        </div>
       )}
     </>
   )
