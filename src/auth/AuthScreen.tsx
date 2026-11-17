@@ -16,7 +16,6 @@ export default function AuthScreen() {
   const [phone, setPhone] = useState('')
   const [idStatus, setIdStatus] = useState<string | null>(null)
   const [password, setPassword] = useState('')
-  const [inviteCode, setInviteCode] = useState('')
   const [studentNo, setStudentNo] = useState('')
   const [age, setAge] = useState('')
   const [source, setSource] = useState('')
@@ -78,7 +77,6 @@ export default function AuthScreen() {
       const trimmedName = name.trim()
       if (trimmedName.length < 1 || trimmedName.length > 30) return setError('이름은 1~30자로 입력해 주세요.')
       if (password.length < 8) return setError('비밀번호는 8자 이상이어야 합니다.')
-      if (!inviteCode.trim()) return setError('가입 코드를 입력해 주세요.')
 
       const trimmedStudentNo = studentNo.trim()
       if (!STUDENT_NO_RE.test(trimmedStudentNo)) return setError('학번은 숫자 4~12자리로 입력해 주세요.')
@@ -101,7 +99,6 @@ export default function AuthScreen() {
         username: trimmedId,
         name: trimmedName,
         password,
-        inviteCode: inviteCode.trim(),
         phone: digits || undefined,
         application: {
           studentNo: trimmedStudentNo,
@@ -204,10 +201,6 @@ export default function AuthScreen() {
             {mode === 'signup' && (
               <>
                 <label>
-                  가입 코드
-                  <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} autoComplete="off" />
-                </label>
-                <label>
                   전화번호 (선택)
                   <input
                     type="tel"
@@ -288,8 +281,8 @@ export default function AuthScreen() {
                   수집 항목: 아이디, 이름, 비밀번호(암호화 저장), 전화번호(선택), 가입 신청서(학번, 나이, 알게 된 경로, 자격증,
                   관심 분야, 가입 동기, 자기소개). 아이디와 이름은 동아리 부원 확인과 로그인에, 전화번호는 긴급 연락에,
                   가입 신청서는 가입 승인 심사에만 사용합니다. 전화번호와 가입 신청서는 본인과 임원진만 볼 수 있습니다.
-                  가입 후 임원진이 승인해야 이용할 수 있습니다.
                 </p>
+                <p className="hint"><strong>가입 후 임원진 승인이 필요합니다.</strong></p>
               </>
             )}
 

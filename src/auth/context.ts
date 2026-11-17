@@ -16,7 +16,6 @@ export interface SignUpInput {
   username: string
   name: string
   password: string
-  inviteCode: string
   phone?: string
   application: ApplicationInput
 }

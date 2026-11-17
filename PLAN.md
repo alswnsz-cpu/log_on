@@ -5,7 +5,7 @@
 
 ## 1. 확정된 조건
 - 인원: 부원 약 11명(대학생), 그중 임원진 2명
-- 가입: 아이디(영문·숫자 4~20자) + 이름 + 비밀번호 + 가입 코드(+ 선택 전화번호, 본인·임원진만 열람) → 임원진 승인 후 사용 가능. 아이디는 내부적으로 가짜 이메일로 변환(Supabase Auth). 비밀번호 재설정은 임원진이 대시보드에서 처리
+- 가입: 아이디(영문·숫자 4~20자) + 이름 + 비밀번호(+ 선택 전화번호, 본인·임원진만 열람) → 임원진 승인 후 사용 가능. 아이디는 내부적으로 가짜 이메일로 변환(Supabase Auth). 비밀번호 재설정은 임원진이 대시보드에서 처리
 - 역할 2개: `member`(부원) / `officer`(임원진). 임원진 1명의 승인·확정만으로 처리
 - 동아리 내부 전용: 비로그인·미승인 상태에서는 어떤 데이터도 보이면 안 됨
 - 시간표: 월~금, 09:00~18:00, 30분 단위. 과목명은 본인만 보고, 타인에게는 "불가 시간"만 노출
@@ -43,7 +43,7 @@ my-project/
 ## 4. 데이터베이스 (supabase/schema.sql 에 작성)
 
 ### 테이블
-- `app_settings(key text pk, value text)`: `signup_code` 저장. 클라이언트에서 직접 읽을 수 없게 RLS로 전부 차단.
+- `app_settings(key text pk, value text)`: 설정 저장(과거 `signup_code` 행은 남아 있으나 더 이상 사용하지 않음). 클라이언트에서 직접 읽을 수 없게 RLS로 전부 차단.
 - `profiles(id uuid pk → auth.users, name text, role text default 'member', status text default 'pending', created_at)`
   - role: `member` | `officer`, status: `pending` | `approved` | `rejected`
 - `schedule_blocks(id, user_id, kind text, subject text, day smallint 0~4, start_min smallint, end_min smallint, semester text, created_at)`
@@ -56,7 +56,7 @@ my-project/
 
 ### 함수·트리거
 - `is_approved()`, `is_officer()`: `security definer`, 현재 로그인 사용자의 profiles를 조회.
-- 가입 트리거(auth.users insert): `raw_user_meta_data`의 `invite_code`가 `app_settings.signup_code`와 다르면 예외를 던져 가입을 막고, 맞으면 `profiles`에 name을 넣고 status=`pending`으로 생성.
+- 가입 트리거(auth.users insert): `raw_user_meta_data`의 아이디·이름·전화번호를 검증하고(가입 코드는 폐지됨), 통과하면 `profiles`에 name을 넣고 status=`pending`으로 생성.
 - 임원진 보호 트리거(profiles update): 변경 후 `officer`이면서 `approved`인 사람이 0명이 되면 거부.
 
 ### RLS 규칙 (모든 테이블 RLS 켜기)
@@ -80,11 +80,12 @@ my-project/
 - [ ] Vite React TS 프로젝트 생성, 라우터, 기본 레이아웃(보라색 테마 변수)
 - [ ] `supabase/schema.sql` 작성 (4번 전부)
 - [ ] `.env.example`, `src/lib/supabase.ts`
-- 사용자가 직접 할 일: supabase.com에서 프로젝트 생성 → SQL 편집기에 schema.sql 실행 → `signup_code` 값 설정 → `.env`에 URL/anon key 입력
+- 사용자가 직접 할 일: supabase.com에서 프로젝트 생성 → SQL 편집기에 schema.sql 실행 → `.env`에 URL/anon key 입력
+- DB를 새로 만들 때는 supabase\ SQL 파일을 모두 실행한 뒤 remove_signup_code.sql을 가장 마지막에 실행한다(가입 코드 검사 제거).
 - 완료 기준: 앱이 실행되고 Supabase에 연결된다. 모든 테이블에 RLS가 켜져 있다.
 
 ### 2단계: 가입·로그인·승인
-- [ ] 가입 화면: 이름, 이메일, 비밀번호, 가입 코드. 수집 항목과 용도를 한 줄 안내
+- [ ] 가입 화면: 이름, 이메일, 비밀번호. 수집 항목과 용도를 한 줄 안내, "가입 후 임원진 승인이 필요합니다" 문구 표시
 - [ ] 로그인/로그아웃, 세션 유지
 - [ ] 상태별 화면: 미로그인 → 로그인 / `pending` → 승인 대기 안내 / `rejected` → 거절 안내 / `approved` → 앱
 - [ ] 임원진 관리 화면(Admin): 승인 대기 목록 승인·거절, 부원 역할 변경(임원진 0명 방지 오류 메시지 표시)

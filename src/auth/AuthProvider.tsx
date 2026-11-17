@@ -9,8 +9,8 @@ function toKoreanError(message: string): string {
   if (m.includes('invalid login credentials')) return '아이디 또는 비밀번호가 올바르지 않습니다.'
   if (m.includes('email not confirmed')) return '계정 확인이 필요합니다. 임원진에게 문의해 주세요.'
   if (m.includes('already registered') || m.includes('already been registered')) return '이미 사용 중인 아이디입니다.'
-  if (m.includes('database error saving new user') || m.includes('가입 코드')) {
-    return '가입 코드가 올바르지 않거나 가입 처리에 실패했습니다.'
+  if (m.includes('database error saving new user')) {
+    return '가입 처리에 실패했습니다. 입력 내용을 확인해 주세요.'
   }
   if (m.includes('password')) return '비밀번호 조건을 확인해 주세요. (8자 이상)'
   if (m.includes('rate limit')) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'
@@ -76,7 +76,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return error ? null : (data as boolean)
   }, [])
 
-  const signUp = useCallback(async ({ username, name, password, inviteCode, phone, application }: SignUpInput) => {
+  const signUp = useCallback(async ({ username, name, password, phone, application }: SignUpInput) => {
     const { data, error } = await supabase.auth.signUp({
       email: usernameToEmail(username),
       password,
@@ -84,7 +84,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           name,
           username: normalizeUsername(username),
-          invite_code: inviteCode,
           ...(phone ? { phone } : {}),
           student_no: application.studentNo,
           age: application.age,
