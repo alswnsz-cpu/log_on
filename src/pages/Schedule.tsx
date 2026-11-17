@@ -85,12 +85,13 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
     const { data, error } = await supabase
       .from('schedule_blocks')
       .select(COLUMNS)
+      .eq('user_id', userId)
       .order('day')
       .order('start_min')
     if (error) setError('시간표를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
     else setBlocks(data as MyBlock[])
     setLoading(false)
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -341,8 +342,8 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
       <section className="card">
         <h2>내 시간표</h2>
         <p className="hint" style={{ marginBottom: 10 }}>
-          빈 칸을 누르면 수시 불가 시간으로 표시되고, 다시 누르면 해제됩니다. 과목명은 나만 볼 수 있고,
-          다른 부원에게는 "불가 시간"만 보입니다.
+          빈 칸을 누르면 수시 불가 시간으로 표시되고, 다시 누르면 해제됩니다. 과목명은 다른 부원도
+          "멤버별" 화면에서 볼 수 있습니다.
         </p>
         <div className="legend">
           <span><i className="swatch class" /> 수업</span>

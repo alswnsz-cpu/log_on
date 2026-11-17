@@ -9,6 +9,7 @@ import Layout from './components/Layout'
 import Calendar from './pages/Calendar'
 import Schedule from './pages/Schedule'
 import Common from './pages/Common'
+import Members from './pages/Members'
 import Agendas from './pages/Agendas'
 import AgendaDetail from './pages/AgendaDetail'
 import Decisions from './pages/Decisions'
@@ -71,6 +72,7 @@ function ApprovedApp({ userId }: { userId: string }) {
           <>
             <Route index element={<Calendar />} />
             <Route path="common" element={<Common />} />
+            <Route path="members" element={<Members />} />
             <Route path="agendas" element={<Agendas />} />
             <Route path="agendas/:id" element={<AgendaDetail />} />
             <Route path="decisions" element={<Decisions />} />

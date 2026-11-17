@@ -11,11 +11,13 @@ export interface MyBlock {
 
 interface Props {
   blocks: MyBlock[]
-  busy: boolean
-  onToggleManual: (day: number, slot: number) => void
+  busy?: boolean
+  /** 읽기 전용이면 칸을 눌러도 아무 일도 일어나지 않는다 */
+  readOnly?: boolean
+  onToggleManual?: (day: number, slot: number) => void
 }
 
-export default function ScheduleGrid({ blocks, busy, onToggleManual }: Props) {
+export default function ScheduleGrid({ blocks, busy = false, readOnly = false, onToggleManual }: Props) {
   // cell[day][slot] = 해당 칸을 덮는 블록, label은 블록 첫 칸에만 표시
   const cells = DAY_LABELS.map(() => Array<{ block: MyBlock; first: boolean } | null>(18).fill(null))
   for (const b of blocks) {
@@ -57,8 +59,12 @@ export default function ScheduleGrid({ blocks, busy, onToggleManual }: Props) {
                   <td
                     key={d}
                     className={`cell ${c ? 'manual' : 'empty'}`}
-                    onClick={() => !busy && onToggleManual(day, slot)}
-                    title={c ? '수시 불가 (클릭하면 해제)' : '클릭하면 불가 시간으로 표시'}
+                    onClick={readOnly ? undefined : () => !busy && onToggleManual?.(day, slot)}
+                    title={
+                      readOnly
+                        ? c ? '수시 불가' : ''
+                        : c ? '수시 불가 (클릭하면 해제)' : '클릭하면 불가 시간으로 표시'
+                    }
                   />
                 )
               })}

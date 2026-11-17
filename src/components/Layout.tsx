@@ -6,6 +6,7 @@ const links = [
   { to: '/', label: '달력', end: true },
   { to: '/schedule', label: '내 시간표' },
   { to: '/common', label: '공통 시간' },
+  { to: '/members', label: '멤버별' },
   { to: '/agendas', label: '토론' },
   { to: '/decisions', label: '결론' },
 ]

@@ -1,0 +1,125 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../auth/useAuth'
+import ScheduleGrid from '../components/ScheduleGrid'
+import type { MyBlock } from '../components/ScheduleGrid'
+
+interface MemberRow {
+  id: string
+  name: string
+}
+
+const COLUMNS = 'id, kind, subject, day, start_min, end_min'
+
+/** 승인된 부원의 시간표를 읽기 전용으로 보는 화면 */
+export default function Members() {
+  const { session } = useAuth()
+  const myId = session!.user.id
+  const [members, setMembers] = useState<MemberRow[]>([])
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  /** 마지막으로 불러온 시간표와 그 주인 */
+  const [loaded, setLoaded] = useState<{ id: string; blocks: MyBlock[] } | null>(null)
+  const [blocksError, setBlocksError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    async function load() {
+      const [p, s] = await Promise.all([
+        supabase.from('profiles').select('id, name').eq('status', 'approved').order('name'),
+        supabase.from('schedule_status').select('user_id'),
+      ])
+      if (!alive) return
+      if (p.error || s.error) setError('부원 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      else {
+        setMembers(p.data as MemberRow[])
+        setDoneIds(new Set((s.data as { user_id: string }[]).map((r) => r.user_id)))
+      }
+      setLoading(false)
+    }
+    load()
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const selected = members.find((m) => m.id === selectedId) ?? null
+  const selectedDone = selected ? doneIds.has(selected.id) : false
+
+  useEffect(() => {
+    // 시간표를 입력하지 않은 사람은 조회하지 않는다
+    if (!selectedId || !doneIds.has(selectedId)) return
+    let alive = true
+    supabase
+      .from('schedule_blocks')
+      .select(COLUMNS)
+      .eq('user_id', selectedId)
+      .order('day')
+      .order('start_min')
+      .then(({ data, error: err }) => {
+        if (!alive) return
+        if (err) setBlocksError('시간표를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        else {
+          setBlocksError(null)
+          setLoaded({ id: selectedId, blocks: data as MyBlock[] })
+        }
+      })
+    return () => {
+      alive = false
+    }
+  }, [selectedId, doneIds])
+
+  if (loading) return <p className="center">불러오는 중...</p>
+  if (error) return <p className="msg error">{error}</p>
+
+  const blocks = loaded && loaded.id === selectedId ? loaded.blocks : null
+
+  return (
+    <section className="card">
+      <h2>멤버별 시간표</h2>
+      <p className="hint" style={{ marginBottom: 10 }}>
+        부원을 고르면 그 사람의 시간표를 볼 수 있어요. 읽기 전용이며, 시간표는 본인만 고칠 수 있습니다.
+      </p>
+      {members.length === 0 ? (
+        <p className="hint">승인된 부원이 없습니다.</p>
+      ) : (
+        <div className="day-picker" style={{ marginBottom: 12 }}>
+          {members.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              className={m.id === selectedId ? 'chip on' : 'chip'}
+              aria-pressed={m.id === selectedId}
+              onClick={() => setSelectedId(m.id)}
+            >
+              {m.name}
+              {m.id === myId ? ' (나)' : ''}
+              {doneIds.has(m.id) ? '' : ' · 미입력'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!selected && members.length > 0 && <p className="hint">위에서 부원을 선택해 주세요.</p>}
+      {selected && !selectedDone && (
+        <p className="hint">{selected.name}님은 시간표 미입력 상태입니다.</p>
+      )}
+      {selected && selectedDone && blocksError && <p className="msg error">{blocksError}</p>}
+      {selected && selectedDone && !blocksError && !blocks && <p className="center">불러오는 중...</p>}
+      {selected && selectedDone && blocks && (
+        <>
+          <h3 style={{ margin: '4px 0 8px' }}>{selected.name}님의 시간표</h3>
+          {blocks.length === 0 && <p className="hint">등록된 수업이나 불가 시간이 없습니다.</p>}
+          <div className="legend">
+            <span><i className="swatch class" /> 수업</span>
+            <span><i className="swatch manual" /> 수시 불가</span>
+          </div>
+          <ScheduleGrid blocks={blocks} readOnly />
+        </>
+      )}
+    </section>
+  )
+}
