@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import type { Profile, Role, Status } from '../auth/context'
@@ -125,17 +125,17 @@ export default function Admin() {
   const [alumni, setAlumni] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, role, status, sort_order')
-      .order('created_at', { ascending: true })
-    if (error) setLoadError('목록을 불러오지 못했습니다.')
+    const [prof, al] = await Promise.all([
+      supabase.from('profiles').select('id, name, role, status, sort_order').order('created_at', { ascending: true }),
+      supabase.from('member_alumni').select('user_id'),
+    ])
+    // 졸업 목록을 못 읽으면 구역이 틀리게 나뉘므로, 둘 다 읽었을 때만 함께(한 번에) 반영한다
+    if (prof.error || al.error) setLoadError('목록을 불러오지 못했습니다.')
     else {
       setLoadError(null)
-      setPeople(data as Person[])
+      setPeople(prof.data as Person[])
+      setAlumni(new Set((al.data as { user_id: string }[]).map((r) => r.user_id)))
     }
-    const al = await supabase.from('member_alumni').select('user_id')
-    if (!al.error) setAlumni(new Set((al.data as { user_id: string }[]).map((r) => r.user_id)))
     // 아이디·전화번호는 임원진(과 본인)에게만 보이는 뷰에서 읽는다.
     const priv = await supabase.from('profile_private').select('id, username, phone')
     if (!priv.error) {
@@ -321,6 +321,9 @@ export default function Admin() {
   const approved = people
     .filter((p) => p.status === 'approved')
     .sort((a, b) => (a.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.sort_order ?? Number.MAX_SAFE_INTEGER))
+  // 정렬된 approved 에서 나누므로 각 구역 안에서도 정한 순서가 그대로 유지된다.
+  const currentMembers = approved.filter((p) => !alumni.has(p.id))
+  const alumniMembers = approved.filter((p) => alumni.has(p.id))
   const rejected = people.filter((p) => p.status === 'rejected')
   const removed = people.filter((p) => p.status === 'removed')
   const withdrawing = withdrawals
@@ -329,6 +332,46 @@ export default function Admin() {
   const resetting = resets
     .map((r) => ({ r, p: people.find((x) => x.id === r.user_id && x.status === 'approved') }))
     .filter((x): x is { r: ResetRequest; p: Person } => Boolean(x.p))
+
+  /** 승인된 사람 한 줄(현재 부원 구역과 졸업생 구역이 함께 쓴다). */
+  const renderPerson = (p: Person, handle: ReactNode) => (
+    <>
+      <span className="sort-main">
+        {handle}
+        <span className="name">
+          {p.name} <span className={p.role === 'officer' ? 'badge' : 'badge muted'}>{ROLE_LABEL[p.role]}</span>
+          {p.id === me.id && <span className="badge muted">나</span>}
+          <PersonMeta info={privates[p.id]} />
+          <ApplicationView app={applications[p.id]} open={false} />
+        </span>
+      </span>
+      <span className="row-actions">
+        <button
+          className="btn btn-sm btn-ghost"
+          disabled={busyId === p.id}
+          onClick={() => {
+            // 졸업생을 임원진으로 올리지 않는다. 먼저 졸업을 해제해야 한다
+            if (p.role === 'member' && alumni.has(p.id)) {
+              return setActionError('졸업생은 먼저 졸업을 해제한 뒤 임원진으로 변경해 주세요.')
+            }
+            update(p.id, { role: p.role === 'officer' ? 'member' : 'officer' })
+          }}
+        >
+          {p.role === 'officer' ? '부원으로 변경' : '임원진으로 변경'}
+        </button>
+        {p.role === 'member' && (
+          <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => toggleAlumni(p)}>
+            {alumni.has(p.id) ? '졸업 해제' : '졸업 지정'}
+          </button>
+        )}
+        {p.role === 'member' && p.id !== me.id && (
+          <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => removeMember(p)}>
+            탈퇴
+          </button>
+        )}
+      </span>
+    </>
+  )
 
   return (
     <>
@@ -431,7 +474,7 @@ export default function Admin() {
 
       <section className="card">
         <div className="section-head">
-          <h2>부원 ({approved.length})</h2>
+          <h2>현재 부원 ({currentMembers.length})</h2>
           {approved.some((p) => p.sort_order != null) && (
             <button className="btn btn-sm btn-ghost" onClick={resetOrder}>
               가입순으로 되돌리기
@@ -442,51 +485,31 @@ export default function Admin() {
           왼쪽 ⋮⋮ 손잡이를 잡고 위아래로 끌어서 원하는 순서로 옮길 수 있어요. 놓으면 바로 저장돼요.
         </p>
         <SortableList
-          items={approved}
+          items={currentMembers}
           getId={(p) => p.id}
           onReorder={reorderMembers}
-          label="부원"
-          renderItem={(p, handle) => (
-            <>
-              <span className="sort-main">
-                {handle}
-                <span className="name">
-                  {p.name} <span className={p.role === 'officer' ? 'badge' : 'badge muted'}>{ROLE_LABEL[p.role]}</span>
-                  {alumni.has(p.id) && <span className="badge muted">졸업</span>}
-                  {p.id === me.id && <span className="badge muted">나</span>}
-                  <PersonMeta info={privates[p.id]} />
-                  <ApplicationView app={applications[p.id]} open={false} />
-                </span>
-              </span>
-              <span className="row-actions">
-                <button
-                  className="btn btn-sm btn-ghost"
-                  disabled={busyId === p.id}
-                  onClick={() => {
-                    // 졸업생을 임원진으로 올리지 않는다. 먼저 졸업을 해제해야 한다
-                    if (p.role === 'member' && alumni.has(p.id)) {
-                      return setActionError('졸업생은 먼저 졸업을 해제한 뒤 임원진으로 변경해 주세요.')
-                    }
-                    update(p.id, { role: p.role === 'officer' ? 'member' : 'officer' })
-                  }}
-                >
-                  {p.role === 'officer' ? '부원으로 변경' : '임원진으로 변경'}
-                </button>
-                {p.role === 'member' && (
-                  <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => toggleAlumni(p)}>
-                    {alumni.has(p.id) ? '졸업 해제' : '졸업 지정'}
-                  </button>
-                )}
-                {p.role === 'member' && p.id !== me.id && (
-                  <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => removeMember(p)}>
-                    탈퇴
-                  </button>
-                )}
-              </span>
-            </>
-          )}
+          label="현재 부원"
+          renderItem={renderPerson}
         />
       </section>
+
+      {alumniMembers.length > 0 && (
+        <section className="card">
+          <div className="section-head">
+            <h2>졸업생 ({alumniMembers.length})</h2>
+          </div>
+          <p className="hint" style={{ marginBottom: 4 }}>
+            순서는 이 구역 안에서만 바뀌고, 현재 부원의 순서에는 영향을 주지 않아요.
+          </p>
+          <SortableList
+            items={alumniMembers}
+            getId={(p) => p.id}
+            onReorder={reorderMembers}
+            label="졸업생"
+            renderItem={renderPerson}
+          />
+        </section>
+      )}
 
       {removed.length > 0 && (
         <section className="card">

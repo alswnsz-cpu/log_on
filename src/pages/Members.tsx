@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
-import { useAlumniIds } from '../lib/alumni'
 import ScheduleGrid from '../components/ScheduleGrid'
 import type { MyBlock } from '../components/ScheduleGrid'
 
@@ -16,8 +15,9 @@ const COLUMNS = 'id, kind, subject, day, start_min, end_min'
 export default function Members() {
   const { session } = useAuth()
   const myId = session!.user.id
-  const alumni = useAlumniIds()
   const [members, setMembers] = useState<MemberRow[]>([])
+  /** 졸업생으로 지정된 부원. 부원 목록과 함께 불러와서, 이름 칩이 줄을 옮겨 다니지 않게 한다 */
+  const [alumniIds, setAlumniIds] = useState<Set<string>>(new Set())
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
   /** 시간표를 비공개로 설정한 부원 */
   const [privateIds, setPrivateIds] = useState<Set<string>>(new Set())
@@ -32,15 +32,18 @@ export default function Members() {
   useEffect(() => {
     let alive = true
     async function load() {
-      const [p, s, v] = await Promise.all([
+      const [p, s, v, al] = await Promise.all([
         supabase.from('profiles').select('id, name').eq('status', 'approved').order('name'),
         supabase.from('schedule_status').select('user_id'),
         supabase.from('schedule_privacy').select('user_id').eq('is_private', true),
+        supabase.from('member_alumni').select('user_id'),
       ])
       if (!alive) return
-      if (p.error || s.error || v.error) setError('부원 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      // 졸업 목록을 못 읽으면 줄이 틀리게 나뉘므로 불러오기 오류로 처리한다
+      if (p.error || s.error || v.error || al.error) setError('부원 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
       else {
         setMembers(p.data as MemberRow[])
+        setAlumniIds(new Set((al.data as { user_id: string }[]).map((r) => r.user_id)))
         setDoneIds(new Set((s.data as { user_id: string }[]).map((r) => r.user_id)))
         setPrivateIds(new Set((v.data as { user_id: string }[]).map((r) => r.user_id)))
       }
@@ -86,6 +89,25 @@ export default function Members() {
 
   const blocks = loaded && loaded.id === selectedId ? loaded.blocks : null
 
+  // 이름순으로 불러온 목록을 부원과 졸업생으로 나눈다(각 줄 안의 이름순은 그대로)
+  const currentList = members.filter((m) => !alumniIds.has(m.id))
+  const alumniList = members.filter((m) => alumniIds.has(m.id))
+
+  const chip = (m: MemberRow) => (
+    <button
+      type="button"
+      key={m.id}
+      className={m.id === selectedId ? 'chip on' : 'chip'}
+      aria-pressed={m.id === selectedId}
+      onClick={() => setSelectedId(m.id)}
+    >
+      {m.name}
+      {m.id === myId ? ' (나)' : ''}
+      {doneIds.has(m.id) ? '' : ' · 미입력'}
+      {m.id !== myId && privateIds.has(m.id) ? ' · 비공개' : ''}
+    </button>
+  )
+
   return (
     <section className="card">
       <h2>멤버별 시간표</h2>
@@ -94,24 +116,25 @@ export default function Members() {
       </p>
       {members.length === 0 ? (
         <p className="hint">승인된 부원이 없습니다.</p>
-      ) : (
+      ) : alumniList.length === 0 ? (
         <div className="day-picker" style={{ marginBottom: 12 }}>
-          {members.map((m) => (
-            <button
-              type="button"
-              key={m.id}
-              className={m.id === selectedId ? 'chip on' : 'chip'}
-              aria-pressed={m.id === selectedId}
-              onClick={() => setSelectedId(m.id)}
-            >
-              {m.name}
-              {m.id === myId ? ' (나)' : ''}
-              {alumni.has(m.id) ? ' · 졸업' : ''}
-              {doneIds.has(m.id) ? '' : ' · 미입력'}
-              {m.id !== myId && privateIds.has(m.id) ? ' · 비공개' : ''}
-            </button>
-          ))}
+          {members.map(chip)}
         </div>
+      ) : (
+        <>
+          {currentList.length > 0 && (
+            <>
+              <p className="hint" style={{ marginBottom: 6 }}>부원 ({currentList.length})</p>
+              <div className="day-picker" style={{ marginBottom: 12 }}>
+                {currentList.map(chip)}
+              </div>
+            </>
+          )}
+          <p className="hint" style={{ marginBottom: 6 }}>졸업생 ({alumniList.length})</p>
+          <div className="day-picker" style={{ marginBottom: 12 }}>
+            {alumniList.map(chip)}
+          </div>
+        </>
       )}
 
       {!selected && members.length > 0 && <p className="hint">위에서 부원을 선택해 주세요.</p>}
