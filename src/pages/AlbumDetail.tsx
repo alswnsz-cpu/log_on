@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { useDialog } from '../components/dialog-context'
 
 const BUCKET = 'logon-photos'
 const MAX_BYTES = 10 * 1024 * 1024
+/** 한 번에 조회하는 사진 행 수. Supabase 기본 응답 상한(1000행)에 맞춘 값이라 사진이 많아도 잘리지 않게 나눠서 읽는다 */
+const PAGE_SIZE = 1000
+/** 저장소 파일을 한 번에 지우는 개수. 공식 상한을 확인한 값이 아니라 넉넉히 잡은 값이다 */
+const REMOVE_CHUNK = 100
 const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
 
 interface Album {
@@ -26,6 +30,7 @@ export default function AlbumDetail() {
   const { id } = useParams()
   const { profile } = useAuth()
   const dialog = useDialog()
+  const navigate = useNavigate()
   const isOfficer = profile?.role === 'officer'
   const [album, setAlbum] = useState<Album | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -39,6 +44,9 @@ export default function AlbumDetail() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const [deletingAlbum, setDeletingAlbum] = useState(false)
+  const [albumDeleteError, setAlbumDeleteError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -131,6 +139,63 @@ export default function AlbumDetail() {
     }
   }
 
+  /** 앨범 삭제(임원진만): 사진 경로를 먼저 모아 두고 → 앨범 행을 지우고 → 성공했을 때만 저장소 파일을 지운다. */
+  async function removeAlbum() {
+    if (!id || !album || deletingAlbum) return
+    const ok = await dialog.confirmTyping({
+      title: '앨범 삭제',
+      message: `"${album.title}" 앨범과 안의 사진이 모두 삭제되며 되돌릴 수 없습니다.\n삭제하려면 아래에 앨범 이름을 그대로 입력해 주세요.`,
+      expected: album.title,
+      confirmLabel: '앨범 삭제',
+    })
+    if (!ok) return
+    setAlbumDeleteError(null)
+    setDeletingAlbum(true)
+    try {
+      // 1) 앨범을 지우면 사진 행도 같이 사라져 경로를 알 수 없으니, 지우기 전에 경로를 전부 모아 둔다
+      const paths: string[] = []
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const page = await supabase
+          .from('album_photos')
+          .select('storage_path')
+          .eq('album_id', id)
+          .order('created_at')
+          .order('id')
+          .range(from, from + PAGE_SIZE - 1)
+        if (page.error) {
+          setAlbumDeleteError('사진 목록을 확인하지 못해 앨범을 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.')
+          return
+        }
+        paths.push(...page.data.map((r) => r.storage_path as string))
+        if (page.data.length < PAGE_SIZE) break
+      }
+
+      // 2) 앨범 행 삭제(사진 행은 cascade). 권한이 없으면 오류 없이 0행이라, 지운 행을 돌려받아 확인한다
+      const del = await supabase.from('albums').delete().eq('id', id).select('id')
+      if (del.error || (del.data?.length ?? 0) === 0) {
+        // 앨범 행 삭제가 실패하면 파일은 건드리지 않는다
+        setAlbumDeleteError('앨범을 삭제하지 못했습니다. 임원진 권한을 확인해 주세요.')
+        return
+      }
+
+      // 3) 앨범 행이 지워진 뒤에만 저장소 파일을 나눠서 지운다. 실패는 화면에 띄우지 않고 기록만 남긴다
+      for (let i = 0; i < paths.length; i += REMOVE_CHUNK) {
+        const chunk = paths.slice(i, i + REMOVE_CHUNK)
+        try {
+          const rm = await supabase.storage.from(BUCKET).remove(chunk)
+          if (rm.error || (rm.data?.length ?? 0) < chunk.length) {
+            console.error('앨범은 지웠지만 저장소 파일 일부를 지우지 못했습니다.', chunk, rm.error)
+          }
+        } catch (err) {
+          console.error('앨범은 지웠지만 저장소 파일 삭제 중 오류가 났습니다.', chunk, err)
+        }
+      }
+      navigate('/archive')
+    } finally {
+      setDeletingAlbum(false)
+    }
+  }
+
   if (loading) return <section className="card"><p>불러오는 중...</p></section>
   if (loadError) return <p className="msg error" role="alert">{loadError}</p>
   if (!album) {
@@ -151,6 +216,21 @@ export default function AlbumDetail() {
         </div>
         {album.description && <p>{album.description}</p>}
         <Link to="/archive" className="btn btn-light btn-sm">← 앨범 목록</Link>
+        {isOfficer && (
+          <>
+            {albumDeleteError && <p className="msg error" role="alert">{albumDeleteError}</p>}
+            <div className="actions">
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost btn-danger"
+                disabled={deletingAlbum || deletingId !== null}
+                onClick={removeAlbum}
+              >
+                {deletingAlbum ? '앨범 삭제 중...' : '앨범 삭제'}
+              </button>
+            </div>
+          </>
+        )}
       </section>
 
       {isOfficer && (
@@ -168,7 +248,7 @@ export default function AlbumDetail() {
             </label>
             {uploadError && <p className="msg error" role="alert">{uploadError}</p>}
             <div className="actions">
-              <button className="btn" disabled={uploading || !file}>{uploading ? '올리는 중...' : '사진 올리기'}</button>
+              <button className="btn" disabled={uploading || !file || deletingAlbum}>{uploading ? '올리는 중...' : '사진 올리기'}</button>
             </div>
           </form>
         </section>
@@ -199,7 +279,7 @@ export default function AlbumDetail() {
                     <button
                       type="button"
                       className="btn btn-sm btn-ghost btn-danger"
-                      disabled={deletingId !== null}
+                      disabled={deletingId !== null || deletingAlbum}
                       onClick={() => removePhoto(p)}
                     >
                       {deletingId === p.id ? '삭제 중...' : '삭제'}
