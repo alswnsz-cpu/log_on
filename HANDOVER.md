@@ -33,3 +33,19 @@
 - DB: `meeting_notes`(제목, 회의 날짜, 내용, 작성자). 읽기는 승인된 사용자(졸업생 포함), 추가·수정·삭제는 임원진이다. 정책은 DB에서 걸려 있다.
 - 목록은 회의 날짜 내림차순이다. 임원진은 "+ 회의 내용 기록"으로 추가하고 각 항목을 수정·삭제한다.
 - SQL: `supabase/add_meeting_notes.sql`. 실행 후 프론트가 동작한다. 되돌리기 문장은 파일 끝 주석에 있다.
+
+## 6단계: 콘텐츠 플래너
+- 활동 일정의 "콘텐츠 플래너"(`/content`)는 동아리 공용 인스타그램 게시 일정이다. "담당자별 업무"(`/tasks`)는 담당자별 미완료 목록이다. 둘 다 졸업생에게 숨기며 DB도 졸업생의 읽기를 막는다.
+- 게시 상태는 기획 중 → 제작 중 → 검토 중 → 게시 예정 → 게시 완료, 검토는 대기/완료다. 미완료는 게시 상태가 "게시 완료"가 아닌 것이다.
+- 권한: 만들기·수정·삭제는 `can_manage_content()`가 참인 사람(지금은 임원진). 담당자는 자기 게시물의 상태와 검토만 `set_post_progress` 함수로 바꾼다. 읽기는 `can_view_content()`(승인된 사용자 중 졸업생이 아닌 사람).
+- 점검 규칙(한국 시간, 월~일 한 주): 주말(토·일) 2건 이상 또는 주 5건 이상이면 과밀, 연속한 게시물 간격이 24시간 미만이면 간격 조정. 기준 숫자는 `src/lib/contentPlanner.ts`의 상수(`CROWDED_WEEK_TOTAL`, `CROWDED_WEEKEND`, `MIN_GAP_HOURS`)다.
+- 게시 예정일시는 DB에 UTC로 저장하고 화면에서는 항상 한국 시간으로 보여 주고 입력받는다(`contentPlanner.ts`의 `toKstLocal`, `fromKstLocal`).
+- 앞으로/뒤로: 목록에서 인접한 두 게시물의 게시 예정일시를 `swap_post_times` 함수로 서로 바꾼다.
+- SQL 실행 순서: `add_member_alumni.sql`(이미 실행) → `add_content_permissions.sql` → `add_content_posts.sql` → 프론트. 되돌리기는 각 파일 끝 주석에 있다(반대 순서로).
+- **팀장 권한을 추가하는 방법**(다음 회장 때):
+  1. 팀장 테이블을 새로 만든다(졸업생 지정과 같은 구조). 예: `create table public.team_leads (user_id uuid primary key references public.profiles (id) on delete cascade);` RLS를 켜고 읽기는 승인된 사용자, 쓰기는 임원진만 두는 정책을 `add_member_alumni.sql`처럼 붙인다.
+  2. 팀장을 판단하는 함수를 만든다(security definer, `set search_path = ''`): `select exists (select 1 from public.team_leads where user_id = auth.uid());`
+  3. `add_content_permissions.sql`의 `can_manage_content()` 본문을 `select public.is_officer() or public.is_team_lead();`로 바꿔 `create or replace`로 다시 실행한다. 이 함수 하나만 바꾸면 `content_posts`의 정책과 `swap_post_times`가 모두 따라간다.
+  4. 화면의 `canManage`(`src/pages/ContentPlanner.tsx`, `ContentTasks.tsx`)가 임원진만 보도록 되어 있으니 팀장도 보이도록 고친다. 화면은 편의일 뿐이고 실제 권한은 DB 함수가 막는다.
+  5. 부원 관리 화면에 팀장 지정 토글을 만든다(`Admin.tsx`의 졸업 지정과 같은 방식).
+- 알려진 한계: 담당자가 졸업생이 되면 그 게시물을 고칠 때 담당자를 다시 지정해야 한다.

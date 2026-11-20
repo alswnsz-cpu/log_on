@@ -1341,6 +1341,56 @@ a.hub-card:focus-visible {
   }
 }
 
+/* 콘텐츠 플래너: 게시물 목록과 상태 표시 */
+.post-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.post-item {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--purple-50);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.post-title {
+  margin: 0;
+  min-width: 0;
+  font-size: 1rem;
+  color: var(--purple-900);
+  overflow-wrap: anywhere;
+}
+
+.post-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.post-progress select {
+  font: inherit;
+  padding: 6px 10px;
+  border: 1px solid var(--purple-200);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+}
+
+.badge.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.warn-text {
+  color: #92400e;
+}
+
 /* 활동 찾기 > 사이트 정리: 링크 카드 */
 .resource-grid {
   display: grid;
