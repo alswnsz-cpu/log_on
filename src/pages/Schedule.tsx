@@ -75,6 +75,41 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 시간표 공개 설정: null = 아직 불러오지 못함(불러오기 실패 포함)
+  const [isPrivate, setIsPrivate] = useState<boolean | null>(null)
+  const [privacySaving, setPrivacySaving] = useState(false)
+  const [privacyError, setPrivacyError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    supabase
+      .from('schedule_privacy')
+      .select('is_private')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data, error: err }) => {
+        if (!alive) return
+        if (err) setPrivacyError('공개 설정을 불러오지 못했습니다. 새로고침해 주세요.')
+        else setIsPrivate(Boolean(data?.is_private))
+      })
+    return () => {
+      alive = false
+    }
+  }, [userId])
+
+  async function togglePrivate() {
+    if (isPrivate === null || privacySaving) return
+    const next = !isPrivate
+    setPrivacySaving(true)
+    setPrivacyError(null)
+    const { error: err } = await supabase
+      .from('schedule_privacy')
+      .upsert({ user_id: userId, is_private: next }, { onConflict: 'user_id' })
+    if (err) setPrivacyError('공개 설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    else setIsPrivate(next)
+    setPrivacySaving(false)
+  }
+
   const [editing, setEditing] = useState<ClassGroup | null>(null)
   const [subject, setSubject] = useState('')
   const [days, setDays] = useState<number[]>([])
@@ -343,8 +378,25 @@ export default function Schedule({ done, onComplete }: ScheduleProps) {
         <h2>내 시간표</h2>
         <p className="hint" style={{ marginBottom: 10 }}>
           빈 칸을 누르면 수시 불가 시간으로 표시되고, 다시 누르면 해제됩니다. 과목명은 다른 부원도
-          "멤버별" 화면에서 볼 수 있습니다.
+          "멤버별" 화면에서 볼 수 있습니다. 보여 주고 싶지 않으면 아래에서 비공개로 바꾸세요.
         </p>
+        <label className="check-row" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+          <input
+            type="checkbox"
+            checked={isPrivate === false}
+            disabled={isPrivate === null || privacySaving}
+            onChange={togglePrivate}
+          />
+          <span>
+            다른 부원에게 내 시간표 공개{privacySaving ? ' (저장 중...)' : isPrivate ? ' — 현재 비공개' : ''}
+          </span>
+        </label>
+        {isPrivate && (
+          <p className="hint" style={{ marginBottom: 10 }}>
+            비공개여도 불가 시간은 "공통 시간" 계산에 반영되고, 과목명은 보이지 않습니다.
+          </p>
+        )}
+        {privacyError && <p className="msg error" role="alert">{privacyError}</p>}
         <div className="legend">
           <span><i className="swatch class" /> 수업</span>
           <span><i className="swatch manual" /> 수시 불가</span>

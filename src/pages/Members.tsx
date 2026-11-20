@@ -17,6 +17,8 @@ export default function Members() {
   const myId = session!.user.id
   const [members, setMembers] = useState<MemberRow[]>([])
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
+  /** 시간표를 비공개로 설정한 부원 */
+  const [privateIds, setPrivateIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,15 +30,17 @@ export default function Members() {
   useEffect(() => {
     let alive = true
     async function load() {
-      const [p, s] = await Promise.all([
+      const [p, s, v] = await Promise.all([
         supabase.from('profiles').select('id, name').eq('status', 'approved').order('name'),
         supabase.from('schedule_status').select('user_id'),
+        supabase.from('schedule_privacy').select('user_id').eq('is_private', true),
       ])
       if (!alive) return
-      if (p.error || s.error) setError('부원 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      if (p.error || s.error || v.error) setError('부원 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
       else {
         setMembers(p.data as MemberRow[])
         setDoneIds(new Set((s.data as { user_id: string }[]).map((r) => r.user_id)))
+        setPrivateIds(new Set((v.data as { user_id: string }[]).map((r) => r.user_id)))
       }
       setLoading(false)
     }
@@ -48,10 +52,13 @@ export default function Members() {
 
   const selected = members.find((m) => m.id === selectedId) ?? null
   const selectedDone = selected ? doneIds.has(selected.id) : false
+  /** 다른 부원이 비공개로 설정한 경우 (본인 시간표는 비공개여도 볼 수 있다) */
+  const selectedHidden = selected ? selected.id !== myId && privateIds.has(selected.id) : false
 
   useEffect(() => {
-    // 시간표를 입력하지 않은 사람은 조회하지 않는다
+    // 시간표를 입력하지 않았거나 비공개인 사람은 조회하지 않는다
     if (!selectedId || !doneIds.has(selectedId)) return
+    if (selectedId !== myId && privateIds.has(selectedId)) return
     let alive = true
     supabase
       .from('schedule_blocks')
@@ -70,7 +77,7 @@ export default function Members() {
     return () => {
       alive = false
     }
-  }, [selectedId, doneIds])
+  }, [selectedId, doneIds, privateIds, myId])
 
   if (loading) return <p className="center">불러오는 중...</p>
   if (error) return <p className="msg error">{error}</p>
@@ -98,18 +105,22 @@ export default function Members() {
               {m.name}
               {m.id === myId ? ' (나)' : ''}
               {doneIds.has(m.id) ? '' : ' · 미입력'}
+              {m.id !== myId && privateIds.has(m.id) ? ' · 비공개' : ''}
             </button>
           ))}
         </div>
       )}
 
       {!selected && members.length > 0 && <p className="hint">위에서 부원을 선택해 주세요.</p>}
-      {selected && !selectedDone && (
+      {selected && !selectedDone && !selectedHidden && (
         <p className="hint">{selected.name}님은 시간표 미입력 상태입니다.</p>
       )}
-      {selected && selectedDone && blocksError && <p className="msg error">{blocksError}</p>}
-      {selected && selectedDone && !blocksError && !blocks && <p className="center">불러오는 중...</p>}
-      {selected && selectedDone && blocks && (
+      {selected && selectedHidden && (
+        <p className="hint">{selected.name}님은 시간표를 비공개로 설정했습니다.</p>
+      )}
+      {selected && selectedDone && !selectedHidden && blocksError && <p className="msg error">{blocksError}</p>}
+      {selected && selectedDone && !selectedHidden && !blocksError && !blocks && <p className="center">불러오는 중...</p>}
+      {selected && selectedDone && !selectedHidden && blocks && (
         <>
           <h3 style={{ margin: '4px 0 8px' }}>{selected.name}님의 시간표</h3>
           {blocks.length === 0 && <p className="hint">등록된 수업이나 불가 시간이 없습니다.</p>}
