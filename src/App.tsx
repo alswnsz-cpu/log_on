@@ -16,6 +16,7 @@ import AgendaDetail from './pages/AgendaDetail'
 import Archive from './pages/Archive'
 import AlbumDetail from './pages/AlbumDetail'
 import Portfolio from './pages/Portfolio'
+import Sites from './pages/explore/Sites'
 import Admin from './pages/Admin'
 import Withdraw from './pages/Withdraw'
 import Profile from './pages/Profile'
@@ -91,6 +92,8 @@ function ApprovedApp({ userId }: { userId: string }) {
             <Route path="archive" element={<Archive />} />
             <Route path="archive/:id" element={<AlbumDetail />} />
             <Route path="portfolio" element={<Portfolio />} />
+            <Route path="explore" element={<Navigate to="/explore/sites" replace />} />
+            <Route path="explore/sites" element={<Sites />} />
           </>
         )}
         <Route path="admin" element={<Admin />} />

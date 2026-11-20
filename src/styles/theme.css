@@ -1341,6 +1341,43 @@ a.hub-card:focus-visible {
   }
 }
 
+/* 활동 찾기 > 사이트 정리: 링크 카드 */
+.resource-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  margin-top: 12px;
+}
+
+.resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--purple-50);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+}
+
+.resource-card strong {
+  color: var(--purple-700);
+}
+
+.resource-card span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.resource-card:hover {
+  border-color: var(--purple-400);
+}
+
+.resource-card:focus-visible {
+  outline: 3px solid var(--purple-500);
+  outline-offset: 2px;
+}
+
 /* 달력 보기 전환(월간/주간)과 공통 시간 확인 버튼 */
 .cal-tools {
   display: flex;

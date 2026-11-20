@@ -57,8 +57,8 @@ export const AREAS: Area[] = [
     key: 'explore',
     label: '활동 찾기',
     description: '공모전과 교내 활동을 찾아봐요.',
-    paths: [],
-    items: [],
+    paths: ['/explore'],
+    items: [{ label: '사이트 정리', to: '/explore/sites' }],
   },
 ]
 
