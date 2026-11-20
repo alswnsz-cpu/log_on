@@ -1,7 +1,9 @@
 # CLAUDE.md
 
 동아리 "Log_on" 웹 서비스(시간표·토론·활동 기록 공유). 운영자는 개발자가 아닐 수 있으니 설명은 쉬운 한국어로 한다.
-자세한 운영 방법은 `HANDOVER.md`, SQL 순서는 `supabase/INDEX.md`, 계획은 `PLAN.md`(8번 개편 계획), 작업 기록은 `OVERNIGHT.md`를 본다.
+자세한 운영 방법은 `HANDOVER.md`(11번에 이어서 개발하는 방법), SQL 순서는 `supabase/INDEX.md`, 계획은 `PLAN.md`(8번 개편 계획), 작업 기록은 `OVERNIGHT.md`를 본다.
+
+> 이 파일은 Claude Code가 자동으로 읽는다. 같은 규칙이 `AGENTS.md`(Codex 등 다른 도구용)에도 있다.
 
 ## 구조
 - 화면: Vite + React + TypeScript (`src/`). 서버 없이 Supabase에 직접 요청한다.
@@ -31,3 +33,4 @@
 - 새 브랜치에서 작업하고, 끝나면 `npm run build`와 `npm run lint` 결과, 바뀐 파일 목록, 사람이 확인할 화면(계정: 임원진·부원·졸업생, 폭: 320/360/390/768/1000px 이상)을 알려 준다.
 - 화면을 직접 볼 수 없으면 확인하지 못했다고 말하고 "검증 전"으로 표시한다.
 - 커밋은 바꾼 파일만 add한다.
+- **이 규칙은 `CLAUDE.md`(Claude Code용)와 `AGENTS.md`(Codex 등 다른 도구용) 두 파일에 똑같이 적혀 있다. 규칙을 바꾸면 두 파일을 함께 고친다.**
