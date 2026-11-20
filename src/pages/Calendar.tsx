@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { useDialog } from '../components/dialog-context'
+import WeekView from '../components/WeekView'
+import { useLayoutContext } from '../components/layout-context'
+import { useElementWidth } from '../lib/useElementWidth'
 import {
   CLUB_COLOR,
   EVENT_COLUMNS,
@@ -16,6 +20,7 @@ import {
   monthGrid,
   ownerName,
   sortOccurrences,
+  startOfWeek,
   timeRange,
   todayStr,
   weekdayKo,
@@ -58,24 +63,23 @@ const emptyForm = (date: string, club: boolean): EventForm => ({
   club,
 })
 
-/** 화면 폭이 px 이상인지(패드 이상인지)를 알려 준다. 화면 크기가 바뀌면 따라서 바뀐다. */
-function useMinWidth(px: number): boolean {
-  const query = `(min-width: ${px}px)`
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
-  useEffect(() => {
-    const mq = window.matchMedia(query)
-    const onChange = () => setMatches(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [query])
-  return matches
-}
-
 export default function Calendar() {
   const { profile } = useAuth()
   const dialog = useDialog()
-  // 날짜 칸에 보여 줄 일정 막대 수: 폰 2개, 패드 이상 3개
-  const maxChips = useMinWidth(768) ? 3 : 2
+  const { alumni } = useLayoutContext()
+  // 사이드바 때문에 본문 폭이 화면 폭과 다르므로, 달력이 실제로 차지한 폭으로 판단한다
+  const gridRef = useRef<HTMLDivElement>(null)
+  const gridWidth = useElementWidth(gridRef)
+  // 날짜 칸에 보여 줄 일정 막대 수: 달력이 540px 이상이면 3개, 그보다 좁으면 2개
+  const maxChips = gridWidth >= 540 ? 3 : 2
+  // 주간 보기에서 600px보다 좁으면 7칸 대신 날짜별로 한 줄씩 쌓는다
+  const weekCompact = gridWidth < 600
+  const [searchParams, setSearchParams] = useSearchParams()
+  const mode: 'month' | 'week' = searchParams.get('view') === 'week' ? 'week' : 'month'
+  /** 월간/주간 전환. 주소(?view=week)에 남겨 새로고침해도 유지된다. */
+  function selectMode(next: 'month' | 'week') {
+    setSearchParams(next === 'week' ? { view: 'week' } : {}, { replace: true })
+  }
   const isOfficer = profile?.role === 'officer'
   /** 임원진은 모든 일정을, 부원은 본인이 만든 일정만 고치거나 지울 수 있다. */
   const canEdit = (e: CalendarEvent) => isOfficer || e.created_by === profile?.id
@@ -370,59 +374,96 @@ export default function Calendar() {
       <div className="cal-layout">
       <div>
       <section className="card">
-        <div className="section-head">
-          <h2>
-            {view.year}년 {view.month0 + 1}월
-          </h2>
-          <div className="cal-nav">
-            <button className="btn btn-sm btn-ghost" onClick={() => shiftMonth(-1)} aria-label="이전 달">
-              ‹
+        <div className="cal-tools">
+          <div className="day-picker" role="group" aria-label="달력 보기">
+            <button type="button" className={mode === 'month' ? 'chip on' : 'chip'} aria-pressed={mode === 'month'} onClick={() => selectMode('month')}>
+              월간
             </button>
-            <button className="btn btn-sm btn-ghost" onClick={() => goTo(today)}>
-              오늘
-            </button>
-            <button className="btn btn-sm btn-ghost" onClick={() => shiftMonth(1)} aria-label="다음 달">
-              ›
+            <button type="button" className={mode === 'week' ? 'chip on' : 'chip'} aria-pressed={mode === 'week'} onClick={() => selectMode('week')}>
+              주간
             </button>
           </div>
+          {!alumni && (
+            <Link to="/common" className="btn btn-sm btn-ghost">
+              공통 시간 확인
+            </Link>
+          )}
         </div>
+        <div ref={gridRef}>
+          {mode === 'week' ? (
+            <WeekView
+              weekStart={startOfWeek(selected)}
+              today={today}
+              selected={selected}
+              byDate={byDate}
+              compact={weekCompact}
+              onSelect={goTo}
+              onAdd={(date) => {
+                goTo(date)
+                openAdd(date)
+              }}
+              onPrev={() => goTo(addDays(selected, -7))}
+              onNext={() => goTo(addDays(selected, 7))}
+              onToday={() => goTo(today)}
+            />
+          ) : (
+            <>
+            <div className="section-head">
+              <h2>
+                {view.year}년 {view.month0 + 1}월
+              </h2>
+              <div className="cal-nav">
+                <button className="btn btn-sm btn-ghost" onClick={() => shiftMonth(-1)} aria-label="이전 달">
+                  ‹
+                </button>
+                <button className="btn btn-sm btn-ghost" onClick={() => goTo(today)}>
+                  오늘
+                </button>
+                <button className="btn btn-sm btn-ghost" onClick={() => shiftMonth(1)} aria-label="다음 달">
+                  ›
+                </button>
+              </div>
+            </div>
 
-        <div className="cal-grid cal-weekdays" aria-hidden="true">
-          {WEEKDAYS.map((w, i) => (
-            <span key={w} className={i === 0 ? 'sun' : i === 6 ? 'sat' : ''}>
-              {w}
-            </span>
-          ))}
-        </div>
-        <div className="cal-grid">
-          {cells.map((c, i) => {
-            const evs = byDate.get(c.date) ?? []
-            const cls = [
-              'cal-cell',
-              c.inMonth ? '' : 'out',
-              c.date === today ? 'today' : '',
-              c.date === selected ? 'sel' : '',
-              i % 7 === 0 ? 'sun' : i % 7 === 6 ? 'sat' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')
-            return (
-              <button
-                key={c.date}
-                type="button"
-                className={cls}
-                onClick={() => goTo(c.date)}
-                aria-label={`${formatDateKo(c.date)}${evs.length > 0 ? `, 일정 ${evs.length}개` : ''}`}
-                aria-pressed={c.date === selected}
-              >
-                <span className="cal-day">{c.day}</span>
-                {evs.slice(0, maxChips).map((e) => (
-                  <span key={e.id} className="cal-ev" style={{ background: eventColor(e) }}>{e.title}</span>
-                ))}
-                {evs.length > maxChips && <span className="cal-more">+{evs.length - maxChips}</span>}
-              </button>
-            )
-          })}
+            <div className="cal-grid cal-weekdays" aria-hidden="true">
+              {WEEKDAYS.map((w, i) => (
+                <span key={w} className={i === 0 ? 'sun' : i === 6 ? 'sat' : ''}>
+                  {w}
+                </span>
+              ))}
+            </div>
+            <div className="cal-grid">
+              {cells.map((c, i) => {
+                const evs = byDate.get(c.date) ?? []
+                const cls = [
+                  'cal-cell',
+                  c.inMonth ? '' : 'out',
+                  c.date === today ? 'today' : '',
+                  c.date === selected ? 'sel' : '',
+                  i % 7 === 0 ? 'sun' : i % 7 === 6 ? 'sat' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+                return (
+                  <button
+                    key={c.date}
+                    type="button"
+                    className={cls}
+                    onClick={() => goTo(c.date)}
+                    aria-label={`${formatDateKo(c.date)}${evs.length > 0 ? `, 일정 ${evs.length}개` : ''}`}
+                    aria-pressed={c.date === selected}
+                  >
+                    <span className="cal-day">{c.day}</span>
+                    {evs.slice(0, maxChips).map((e) => (
+                      <span key={e.id} className="cal-ev" style={{ background: eventColor(e) }}>{e.title}</span>
+                    ))}
+                    {evs.length > maxChips && <span className="cal-more">+{evs.length - maxChips}</span>}
+                  </button>
+                )
+              })}
+            </div>
+            </>
+          )}
         </div>
         {(legend.hasClub || legend.owners.length > 0) && (
           <div className="cal-legend" aria-label="색 설명">

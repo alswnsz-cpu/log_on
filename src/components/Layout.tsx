@@ -48,7 +48,7 @@ export default function Layout({ locked = false, alumni = false }: { locked?: bo
       <div className={area ? 'app-shell has-nav' : 'app-shell'}>
         {area && <AreaNav area={area} alumni={alumni} />}
         <main className="container">
-          <Outlet />
+          <Outlet context={{ alumni }} />
         </main>
       </div>
     </>

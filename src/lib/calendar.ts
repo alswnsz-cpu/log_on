@@ -211,3 +211,9 @@ export function sortOccurrences(list: Occurrence[]): Occurrence[] {
     (a, b) => a.occ_date.localeCompare(b.occ_date) || (a.start_time ?? '').localeCompare(b.start_time ?? ''),
   )
 }
+
+/** 그 날짜가 속한 주의 일요일. 한 주는 월 달력과 같은 기준(일~토)이다. */
+export function startOfWeek(date: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return addDays(date, -new Date(y, m - 1, d).getDay())
+}
