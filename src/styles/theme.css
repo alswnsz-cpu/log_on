@@ -1643,3 +1643,60 @@ a.hub-card:focus-visible {
     font-size: 0.95rem;
   }
 }
+
+/* ===== 포트폴리오 미리보기와 인쇄(PDF 저장) ===== */
+.print-doc h3 {
+  margin: 16px 0 6px;
+  padding-bottom: 4px;
+  font-size: 1.05rem;
+  color: var(--purple-700);
+  border-bottom: 1px solid var(--border);
+}
+
+.print-doc h4 {
+  margin: 10px 0 2px;
+  font-size: 0.95rem;
+}
+
+.print-headline {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.print-certs {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+/* 인쇄할 때는 미리보기 카드만 남긴다 */
+@media print {
+  .no-print,
+  .app-header,
+  .area-nav {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .app-shell.has-nav,
+  .app-shell {
+    display: block;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .app-shell .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-doc {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}

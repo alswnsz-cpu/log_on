@@ -57,7 +57,7 @@ export const AREAS: Area[] = [
     label: '포트폴리오',
     description: '나의 경력과 활동을 정리해요.',
     paths: ['/portfolio'],
-    items: [{ label: '포트폴리오', to: '/portfolio' }],
+    items: [{ label: '직무별 포트폴리오', to: '/portfolio' }],
   },
   {
     key: 'explore',

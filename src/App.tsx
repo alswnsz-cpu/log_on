@@ -16,6 +16,7 @@ import AgendaDetail from './pages/AgendaDetail'
 import Archive from './pages/Archive'
 import AlbumDetail from './pages/AlbumDetail'
 import Portfolio from './pages/Portfolio'
+import PortfolioEditor from './pages/PortfolioEditor'
 import Sites from './pages/explore/Sites'
 import MeetingNotes from './pages/MeetingNotes'
 import ContentPlanner from './pages/ContentPlanner'
@@ -104,6 +105,7 @@ function ApprovedApp({ userId }: { userId: string }) {
             <Route path="archive" element={<Archive />} />
             <Route path="archive/:id" element={<AlbumDetail />} />
             <Route path="portfolio" element={<Portfolio />} />
+            <Route path="portfolio/:docId" element={<PortfolioEditor />} />
             <Route path="explore" element={<Navigate to="/explore/sites" replace />} />
             <Route path="explore/sites" element={<Sites />} />
           </>

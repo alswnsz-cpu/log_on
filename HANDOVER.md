@@ -57,3 +57,13 @@
 - 개별 노트(`/notes`, 테이블 `notes`)는 나만 보는 메모다. 토론(`agenda_id`)에 연결해도 되고 안 해도 된다. 안건 상세의 "내 메모(나만 보임)" 카드(`AgendaNote.tsx`)도 같은 테이블을 쓴다. 이 카드는 확정 여부와 상관없이 쓸 수 있고, 안건 의견 카드와 "내 의견 남기기" 카드 사이에 있다.
 - SQL 실행 순서: `add_activity_records.sql` → (선택) `copy_activities_to_records.sql`, `add_projects.sql`, `add_notes.sql` → 프론트. 서로 의존하지 않아 앞의 세 파일은 순서를 바꿔도 된다(복사 파일만 `add_activity_records.sql` 뒤여야 한다). 되돌리기는 각 파일 끝 주석에 있다.
 - 졸업생: 활동 기록, 공모전·프로젝트 읽기, 개별 노트, 안건 메모 모두 쓸 수 있다(숨김 표시 없음).
+
+## 8단계: 포트폴리오
+- `/portfolio`는 직무별 포트폴리오 목록이고 `/portfolio/:docId`가 편집 화면이다. 한 사람이 직무마다 문서를 따로 만든다. 문서는 본인만 읽고 쓰며 임원진도 다른 사람 것은 볼 수 없다(DB 정책).
+- DB: `portfolio_documents`(직무 이름 `job_title`, 칸별 글 `content`). 칸 구성과 직무 기본 목록은 `src/lib/portfolioFields.ts`에 있다. 직무 기본 목록은 `DEFAULT_JOBS`를 고치면 되고, 목록 밖의 직무는 화면에서 직접 입력한다.
+- 칸을 더하려면 `SECTIONS`에 항목을 넣는다. 저장할 때 `SECTIONS`에 없는 칸은 버려지므로 칸 키를 바꾸면 기존 글이 보이지 않게 된다.
+- 예전 `portfolios`는 지우지 않았다. 부원이 화면의 "예전 포트폴리오 가져오기"로 새 문서 하나로 가져오거나, `supabase/copy_portfolios_to_documents.sql`로 한꺼번에 복사한다. 복사본은 `legacy_user_id`가 채워지고, 이 값이 사람당 한 번만 가져오게 막는다. 복사를 되돌리려면 그 파일 끝 주석을 쓴다. 활동·수상은 `activity_records`(활동 기록)로 일원화했고 예전 `activities`는 DB에 그대로 있다.
+- 문장 만들기는 AI가 아니라 규칙·템플릿이다(`src/lib/portfolioTemplates.ts`). 활동 기록의 이름·역할·한 일·결과·기간을 정해진 문장 틀에 끼워 넣고, 받침에 맞춰 조사(을/를, 로서/으로서, 이라는/라는)를 고른다. 직무별 "키운 역량" 구절은 같은 파일의 `JOB_SKILL`에 있다. 새 직무를 기본 목록에 넣으면 이 구절도 함께 적어 준다(없으면 기본 구절을 쓴다).
+- PDF: 편집 화면의 "PDF로 저장 / 인쇄"는 브라우저 인쇄를 쓴다. 인쇄할 때는 `no-print` 표시가 있는 부분과 헤더·메뉴를 숨기고 미리보기 카드(`print-doc`)만 남기는 CSS가 `theme.css` 끝에 있다.
+- SQL 실행 순서: `add_portfolio_documents.sql` → (선택) `copy_portfolios_to_documents.sql` → 프론트. 프론트가 먼저 배포되면 포트폴리오 화면이 불러오기 오류를 낸다. 되돌리기는 각 파일 끝 주석에 있다.
+- 졸업생: 졸업생도 계속 쓸 수 있다(숨김 표시 없음).

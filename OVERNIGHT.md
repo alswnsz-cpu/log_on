@@ -19,7 +19,8 @@
 | 4 | feat/overhaul-4-sites | c82dc50 |
 | 5 | feat/overhaul-5-meeting-notes | 7a6b07b |
 | 6 | feat/overhaul-6-content-planner | 4fe775b |
-| 7 | feat/overhaul-7-records | (다음 단계에서 기록) |
+| 7 | feat/overhaul-7-records | 8100cbc |
+| 8 | feat/overhaul-8-portfolio | (마지막 문서 커밋에서 기록) |
 
 ## 0단계: 2단계 작업 커밋
 - 브랜치 `feat/overhaul-2-discussion-tabs`, 커밋 `3c3e5e3` "개편 2단계: 토론 탭(전체·토론 중·확정 및 결론)".
@@ -147,3 +148,33 @@
   - 토론이 지워지면 노트는 남도록 `agenda_id`를 `on delete set null`로 했다.
   - 활동 기록·노트·프로젝트는 졸업생에게도 보인다(숨김 표시 없음). 졸업생도 포트폴리오를 계속 쓸 수 있어야 해서.
 - 못 한 것: SQL은 실행하지 못했다(규칙상 접속 금지). 화면 모양도 직접 확인하지 못했다.
+
+## 8단계: 포트폴리오 개편
+- 브랜치 `feat/overhaul-8-portfolio` (7단계 브랜치 위).
+- **메시지 끝이 "기존 portfolios"에서 잘려 있었다.** PLAN.md의 결정(기존 데이터는 지우지 않고 복사만, 되돌릴 수 있게)대로 해석했다. 이유는 아래 결정 사항에 적었다.
+- 변경 파일: `src/App.tsx`, `src/lib/areas.ts`, `src/pages/Portfolio.tsx`(목록·자격증 화면으로 다시 만듦), `src/styles/theme.css`, `OVERNIGHT.md`, `HANDOVER.md`.
+- 새 파일: `src/pages/PortfolioEditor.tsx`, `src/lib/portfolioFields.ts`, `src/lib/portfolioTemplates.ts`, `supabase/add_portfolio_documents.sql`, `supabase/copy_portfolios_to_documents.sql`.
+- **새 SQL과 실행 순서**:
+  1. 실행 전에 PLAN.md 8-6의 "처음 한 번" 백업(CSV)을 하고, `portfolios`도 CSV로 받아 둔다.
+  2. `supabase/add_portfolio_documents.sql` (테이블 `portfolio_documents`, 본인만). **이 SQL을 실행하기 전에는 포트폴리오 화면이 불러오기 오류를 보이니, 프론트 배포는 반드시 SQL 다음이다.**
+  3. (선택, 내가 직접 실행) `supabase/copy_portfolios_to_documents.sql` — 예전 `portfolios`를 새 문서로 복사만 한다. 하지 않아도 예전 포트폴리오가 있는 부원 화면에 "예전 포트폴리오 가져오기" 버튼이 나와서 각자 한 번 가져올 수 있다(중복 가져오기는 DB가 막는다).
+  4. 프론트를 배포한다.
+  - **되돌리기**: 프론트를 먼저 되돌린 뒤 `add_portfolio_documents.sql` 끝 주석의 `drop table`을 실행한다. 복사만 되돌리려면 `copy_portfolios_to_documents.sql` 끝 주석(가져온 문서만 삭제)을 쓴다. 예전 `portfolios`, `certifications`, `activities`는 어떤 경우에도 건드리지 않는다.
+- 한 일:
+  - `/portfolio`는 "직무별 포트폴리오" 목록이다. "+ 직무별 포트폴리오"로 기본 직무 목록(물류관리, SCM, 국제물류·포워딩, 항만·해운, 무역·수출입, 유통·리테일) 또는 "직접 입력"으로 새 문서를 만들고, 열기·삭제한다. 자격증 관리는 같은 화면에 남겼다. 활동·수상 입력칸은 활동 기록(`/records`)으로 대체했다는 안내 카드로 바꿨다.
+  - `/portfolio/:docId`는 편집 화면이다. 칸은 기본 정보(한 줄 소개, 자기소개, 학력·전공, 희망 직무·목표, 연락처), 경력 및 활동(경력·인턴, 프로젝트·공모전, 보유 역량), 자기소개서(지원 동기, 직무 역량과 경험, 성격의 장단점과 협업 경험, 입사 후 포부)다.
+  - 활동 기록으로 문장 만들기: 활동 기록을 고르면 경험 소개·역할 강조·성과 중심·직무 연결 문장 후보를 규칙과 템플릿으로 만든다(`portfolioTemplates.ts`, AI 연동 없음, 받침에 따른 조사 처리 포함). 고른 칸에 붙인 뒤 저장해야 반영된다.
+  - 미리보기와 "PDF로 저장 / 인쇄": 채운 칸과 자격증을 한 문서로 보여 주고, 브라우저 인쇄(PDF로 저장)에서는 미리보기 카드만 인쇄되도록 인쇄용 CSS를 넣었다.
+- 확인할 화면과 계정(SQL 실행 후):
+  - 모든 계정(졸업생 포함): 새 문서 만들기(기본 직무와 직접 입력), 칸 채우기와 저장, 새로고침 후 유지, 삭제. 다른 사람의 문서는 보이지 않아야 한다(임원진도).
+  - 활동 기록이 있는 계정: 문장 후보가 나오고 "이 문장 붙이기"로 고른 칸에 붙는지. 받침 있는 활동 이름·역할로도 조사가 어색하지 않은지.
+  - 예전 포트폴리오가 있는 계정: "예전 포트폴리오 가져오기" 버튼으로 문서가 생기고 두 번째로는 버튼이 사라지는지.
+  - "PDF로 저장 / 인쇄"를 눌러 인쇄 미리보기에 헤더·메뉴·입력칸 없이 문서만 나오는지(Chrome 인쇄 창에서 확인).
+  - 폭: 320/360/390px에서 폼과 문장 카드가 겹치지 않는지.
+- 결정 사항:
+  - 예전 포트폴리오의 칸 이름(headline, bio 등)을 새 문서가 그대로 이어받는다. 이유: 복사·가져오기 때 글을 변환하지 않아도 되고 되돌리기도 쉽다.
+  - 원본 LOG:ON의 "자기소개서" 항목 중 지원 동기·직무 역량·입사 후 포부에 "성격의 장단점과 협업 경험"까지 네 칸을 넣었다(PLAN.md의 항목).
+  - 활동은 `activity_records`로 일원화하고 포트폴리오 화면의 옛 활동·수상 입력은 없앴다. 예전 `activities` 데이터는 DB에 그대로 있고 `copy_activities_to_records.sql`로 옮길 수 있다.
+  - PDF 인쇄는 별도 라이브러리 없이 브라우저 인쇄(PDF로 저장)를 쓴다. 이유: 새 라이브러리를 늘리지 않는 가장 단순하고 안전한 방법.
+  - 원본에 있던 "백업" 내려받기는 요청 목록에 없어 만들지 않았다.
+- 못 한 것: SQL은 실행하지 못했다(규칙상 접속 금지). 화면 모양과 인쇄 결과는 직접 확인하지 못했다.
