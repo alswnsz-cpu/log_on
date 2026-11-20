@@ -64,7 +64,12 @@ export const AREAS: Area[] = [
     label: '활동 찾기',
     description: '공모전과 교내 활동을 찾아봐요.',
     paths: ['/explore'],
-    items: [{ label: '사이트 정리', to: '/explore/sites' }],
+    // 졸업생에게도 모두 보인다(숨김 표시 없음)
+    items: [
+      { label: '사이트 정리', to: '/explore/sites' },
+      { label: '교내활동', to: '/explore/campus' },
+      { label: '대외활동', to: '/explore/external' },
+    ],
   },
 ]
 

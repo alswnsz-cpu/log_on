@@ -18,6 +18,8 @@ import AlbumDetail from './pages/AlbumDetail'
 import Portfolio from './pages/Portfolio'
 import PortfolioEditor from './pages/PortfolioEditor'
 import Sites from './pages/explore/Sites'
+import Campus from './pages/explore/Campus'
+import External from './pages/explore/External'
 import MeetingNotes from './pages/MeetingNotes'
 import ContentPlanner from './pages/ContentPlanner'
 import ContentTasks from './pages/ContentTasks'
@@ -108,6 +110,8 @@ function ApprovedApp({ userId }: { userId: string }) {
             <Route path="portfolio/:docId" element={<PortfolioEditor />} />
             <Route path="explore" element={<Navigate to="/explore/sites" replace />} />
             <Route path="explore/sites" element={<Sites />} />
+            <Route path="explore/campus" element={<Campus />} />
+            <Route path="explore/external" element={<External />} />
           </>
         )}
         <Route path="admin" element={<Admin />} />

@@ -20,7 +20,8 @@
 | 5 | feat/overhaul-5-meeting-notes | 7a6b07b |
 | 6 | feat/overhaul-6-content-planner | 4fe775b |
 | 7 | feat/overhaul-7-records | 8100cbc |
-| 8 | feat/overhaul-8-portfolio | 9ad4b23 |
+| 8 | feat/overhaul-8-portfolio | 9ad4b23 (문서 정리 a031520) |
+| 9 | feat/overhaul-9-activity-feed | `git log -1 --format=%h feat/overhaul-9-activity-feed`로 확인 |
 
 ## 0단계: 2단계 작업 커밋
 - 브랜치 `feat/overhaul-2-discussion-tabs`, 커밋 `3c3e5e3` "개편 2단계: 토론 탭(전체·토론 중·확정 및 결론)".
@@ -216,3 +217,41 @@
 - 포트폴리오: 예전 `portfolios`는 지우지 않았지만, 새 화면은 `portfolio_documents`를 보므로 프론트 배포 전에 `add_portfolio_documents.sql`을 반드시 먼저 실행해야 한다.
 - 졸업생에게 숨긴 메뉴는 주소를 직접 입력하면 화면이 열린다(콘텐츠 플래너·담당자별 업무는 DB가 막아서 내용은 안 보인다. 내 시간표·공통 시간은 기존 정책 그대로다).
 - 9단계(교내·대외활동 자동 수집, 서버 함수, 환경변수)와 10단계(통합 점검·`main` 배포)는 하지 않았다. 서비스 롤 키 등 비밀 값은 어디에도 쓰지 않았다.
+
+## 9단계: 활동 찾기 > 교내활동·대외활동 자동 수집
+- 브랜치 `feat/overhaul-9-activity-feed` (8단계 브랜치 위). 위 "아침 점검 요약"에서 9단계를 하지 않았다고 적은 부분은 이 단계에서 해결됐다.
+- 변경 파일: `src/App.tsx`, `src/lib/areas.ts`, `src/styles/theme.css`, `tsconfig.json`(서버 함수 폴더를 타입 검사에 포함), `vercel.json`, `OVERNIGHT.md`, `HANDOVER.md`.
+- 새 파일: `api/tsconfig.json`, `api/activities/campus.ts`, `api/activities/external.ts`, `api/_lib/{http,auth,feeds,store,serve}.ts`, `src/lib/activityFeed.ts`, `src/lib/useFeed.ts`, `src/components/FeedItemRow.tsx`, `src/pages/explore/Campus.tsx`, `src/pages/explore/External.tsx`, `supabase/add_activity_feed.sql`.
+- **새 SQL과 실행 순서**:
+  1. 실행 전에 PLAN.md 8-6의 "처음 한 번" 백업(CSV)을 한다.
+  2. `supabase/add_activity_feed.sql` (테이블 `activity_snapshots`(캐시, 서버 전용), `campus_favorites`(본인만)).
+  3. **Vercel 환경변수 설정**(아래).
+  4. 프론트와 서버 함수를 배포한다. 위 "전체 SQL 실행 순서" 맨 끝에 이 파일이 추가된다.
+  - **되돌리기**: 프론트와 서버 함수(배포)를 먼저 되돌린 뒤 파일 끝 주석의 `drop table`을 실행한다. 캐시는 다시 수집하면 채워지고, 즐겨찾기만 사라진다.
+- **Vercel 환경변수(이름만 적는다. 값은 Vercel 대시보드에서 직접 넣는다)**:
+  - `SUPABASE_SERVICE_ROLE_KEY` — **서버 전용**, 캐시 테이블 쓰기에 필요하다. 절대 `VITE_`를 붙이지 않는다. 없어도 공고는 보이지만 저장본이 없어서 외부가 끊기면 오류가 난다.
+  - `SUPABASE_URL`, `SUPABASE_ANON_KEY` — 선택. 없으면 이미 있는 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`를 서버 함수가 읽는다(둘 다 공개 값이다).
+  - `MOYEOBOM_API_URL` — 선택. 모여봄 주소가 바뀔 때만 넣는다.
+  - Production과 Preview 모두에 넣고, 추가한 뒤에는 다시 배포해야 반영된다.
+- 한 일:
+  - 서버 함수 `GET /api/activities/campus`(교내활동), `GET /api/activities/external`(대외활동). 요청의 로그인 토큰을 Supabase Auth로 검증하고, 그 사용자의 `profiles.status`가 `approved`인 사람만 통과시킨다(졸업생 포함). 아니면 401/403.
+  - 수집 로직은 원본 `feed-server.mjs`를 TypeScript로 옮겼다: 모여봄 피드(교내·교외), 구글 뉴스 RSS(모집 보도), 분야 분류, 중복 제거, 최신순 60건, https 링크만 허용.
+  - 캐시: 3분 안의 저장본은 그대로 돌려주고, 아니면 새로 수집해 `activity_snapshots`에 저장한다(서비스 롤 키 사용).
+  - 외부가 끊기면: 마지막 저장본을 `stale`(이전 수집 자료)로 보여 주고 "최신 공고를 확인하지 못해 ○○에 수집한 이전 자료를 보여 드려요" 안내를 띄운다. 저장본이 하나도 없을 때만 오류(503)와 대체 안내(교내소식·사이트 정리 링크)를 보여 준다.
+  - 화면: 활동 찾기에 "교내활동"(분류·제목 검색·게시일 필터, 즐겨찾기, 원본 게시판 목록)과 "대외활동"(분야·제목 검색)을 추가했다. 3분마다 자동으로 다시 확인하고(탭이 숨겨져 있으면 건너뜀), 다시 확인에 실패해도 마지막으로 불러온 공고는 남긴다. 졸업생에게도 보인다(숨김 표시 없음).
+  - 즐겨찾기는 `campus_favorites`에 본인 행만(RLS) 저장한다.
+  - `vercel.json`의 SPA 재작성 규칙을 `/(.*)`에서 `/((?!api/).*)`로 바꿨다. `/api/...`는 화면(index.html)으로 가로채이지 않고 서버 함수로 간다.
+- 확인한 것: 빌드와 린트 통과(서버 함수 폴더도 엄격 모드로 타입 검사에 들어간다). 수집 로직은 읽기 요청 한 번씩으로 실제 응답에 돌려 봤다 — 교내활동 40건(게시판 글 번호 키 추출 정상, 일부 출처가 최신 확인이 안 돼 `partial`), 대외활동 15건.
+- 확인할 화면과 계정(SQL 실행·환경변수 설정·배포 후, 로컬 `npm run dev`로는 확인 불가):
+  - 먼저 배포(Preview)에서 `/api/activities/campus`를 로그인 없이 직접 열었을 때 화면이 아니라 `{"error":"로그인이 필요합니다."}` 같은 JSON(401)이 오는지(재작성 규칙 확인).
+  - 모든 계정(임원진·부원·졸업생): 허브의 "활동 찾기" → 교내활동·대외활동이 열리고 공고가 보이는지. 분류·검색·게시일 필터. 제목을 누르면 원문이 새 창으로 열리는지. 교내활동에서 ☆ 즐겨찾기 → "나의 즐겨찾기" 분류에 나타나고 다시 누르면 사라지는지.
+  - 외부 끊김 흉내: 환경변수 `MOYEOBOM_API_URL`을 잘못된 https 주소로 바꿔 배포한 뒤 화면을 새로 열어, 저장본이 있으면 "이전 수집 자료" 안내와 함께 목록이 보이고, 저장본이 없으면 오류와 대체 안내가 보이는지(확인 후 환경변수 원복).
+  - 폭: 320/360/390px에서 필터 폼, 공고 줄(제목과 즐겨찾기 버튼), 상태 문구가 겹치지 않는지.
+- 결정 사항:
+  - 오래된 저장본도 수집 시각과 함께 보여 준다. 원본은 교내활동의 저장본을 하루까지만 썼지만, 요청이 "끊기면 마지막 저장본을 보여 주고 안내"라서 나이 제한을 두지 않고 안내 문구에 수집 시각을 넣었다.
+  - 원본이 내장하던 대외활동 대체 자료(`external-activities.json`, 2026년 10월 기사)는 가져오지 않았다. 오래된 기사를 새 자료처럼 보여 줄 수 있어서, 저장본이 없으면 오류와 사이트 정리 링크 안내로 대신한다.
+  - 서버 함수는 `@vercel/node` 같은 새 라이브러리 없이 Node 기본 요청·응답 객체만 쓴다(새 의존성을 늘리지 않으려고). 상대 경로 import에 `.js` 확장자를 쓴 것은 프로젝트가 ESM(`"type": "module"`)이어서다.
+  - 서비스 롤 키가 없으면 저장 없이 매번 직접 수집하도록 했다(오류로 막지 않고 낮은 단계로 동작).
+  - 저장본 갱신은 단순 덮어쓰기다(원본의 "더 새로운 때만 갱신" 조건은 두 요청이 동시에 겹칠 때만 의미가 있어 생략했다).
+  - 즐겨찾기는 서버 함수 없이 화면이 Supabase에 직접 저장한다(RLS가 본인 행만 허용).
+- 못 한 것: Supabase에 접속하지 못하고 SQL도 실행하지 못했다(규칙상 금지). 서버 함수를 Vercel에서 실제로 돌려 보지 못했고(로컬 `npm run dev`는 `api/`를 실행하지 못한다), 화면 모양도 확인하지 못했다. `vercel dev`로 로컬에서 돌려 볼 수는 있지만 이 환경에서는 쓰지 않았다. 구글 뉴스 RSS의 이용 약관은 확인하지 못했다.

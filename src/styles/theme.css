@@ -1413,6 +1413,18 @@ a.hub-card:focus-visible {
   color: #92400e;
 }
 
+/* 활동 찾기 > 교내활동·대외활동: 공고 제목 링크 */
+.feed-title {
+  min-width: 0;
+  font-weight: 700;
+  color: var(--purple-700);
+  overflow-wrap: anywhere;
+}
+
+a.feed-title:hover {
+  text-decoration: underline;
+}
+
 /* 활동 찾기 > 사이트 정리: 링크 카드 */
 .resource-grid {
   display: grid;
