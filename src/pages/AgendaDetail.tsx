@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import StanceBar from '../components/StanceBar'
 import { useDialog } from '../components/dialog-context'
+import { useAlumniIds } from '../lib/alumni'
 import {
   authorName,
   countStances,
@@ -94,6 +95,7 @@ export default function AgendaDetail() {
     load()
   }, [load])
   useRealtimeRefresh(`agenda-${agendaId}`, load)
+  const alumni = useAlumniIds()
 
   const mine = opinions.find((o) => o.user_id === profile?.id)
 
@@ -321,6 +323,7 @@ export default function AgendaDetail() {
               <li key={o.id}>
                 <span className="name">
                   {authorName(o.profiles)}
+                  {alumni.has(o.user_id) && <span className="badge muted">졸업</span>}
                   <span className={`badge stance-${o.stance}`}>{STANCE_LABEL[o.stance]}</span>
                 </span>
                 {o.content && <span className="opinion-text">{o.content}</span>}

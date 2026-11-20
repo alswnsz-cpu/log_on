@@ -13,11 +13,18 @@ const links = [
   { to: '/portfolio', label: '포트폴리오' },
 ]
 
-/** locked: 시간표 입력 완료 전이라 내 시간표 메뉴만 보여 준다. */
-export default function Layout({ locked = false }: { locked?: boolean }) {
+/** 졸업생에게는 시간표를 입력하고 맞추는 메뉴를 보여 주지 않는다(본인 시간표 데이터는 그대로 둔다). */
+const ALUMNI_HIDDEN = ['/schedule', '/common']
+
+/** locked: 시간표 입력 완료 전이라 내 시간표 메뉴만 보여 준다. alumni: 졸업생이라 시간표 입력·공통 시간 메뉴를 숨긴다. */
+export default function Layout({ locked = false, alumni = false }: { locked?: boolean; alumni?: boolean }) {
   const { profile, signOut } = useAuth()
   const isOfficer = profile?.role === 'officer'
-  const shown = locked ? links.filter((l) => l.to === '/schedule') : links
+  const shown = locked
+    ? links.filter((l) => l.to === '/schedule')
+    : alumni
+      ? links.filter((l) => !ALUMNI_HIDDEN.includes(l.to))
+      : links
 
   return (
     <>
@@ -28,6 +35,7 @@ export default function Layout({ locked = false }: { locked?: boolean }) {
             <p className="tagline">{APP_TAGLINE}</p>
             <p>
               {profile?.name}님 {isOfficer && '· 임원진'}
+              {alumni && '· 졸업생'}
             </p>
           </div>
           <div className="header-actions">

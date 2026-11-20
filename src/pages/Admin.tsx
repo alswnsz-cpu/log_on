@@ -121,6 +121,8 @@ export default function Admin() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  /** 졸업생으로 지정된 부원 */
+  const [alumni, setAlumni] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -132,6 +134,8 @@ export default function Admin() {
       setLoadError(null)
       setPeople(data as Person[])
     }
+    const al = await supabase.from('member_alumni').select('user_id')
+    if (!al.error) setAlumni(new Set((al.data as { user_id: string }[]).map((r) => r.user_id)))
     // 아이디·전화번호는 임원진(과 본인)에게만 보이는 뷰에서 읽는다.
     const priv = await supabase.from('profile_private').select('id, username, phone')
     if (!priv.error) {
@@ -166,6 +170,25 @@ export default function Admin() {
     const { error } = await supabase.from('profiles').update(patch).eq('id', id)
     setBusyId(null)
     if (error) setActionError(friendlyError(error.message))
+    await load()
+  }
+
+  /** 졸업 지정/해제(임원진만). 임원진 계정은 지정할 수 없고, 지울 때와 지정할 때 모두 실제로 바뀐 행이 있는지 확인한다. */
+  async function toggleAlumni(p: Person) {
+    const makeAlumni = !alumni.has(p.id)
+    setActionError(null)
+    setBusyId(p.id)
+    const res = makeAlumni
+      ? await supabase.from('member_alumni').insert({ user_id: p.id }).select('user_id')
+      : await supabase.from('member_alumni').delete().eq('user_id', p.id).select('user_id')
+    setBusyId(null)
+    if (res.error || (res.data?.length ?? 0) === 0) {
+      setActionError(
+        makeAlumni
+          ? '졸업으로 지정하지 못했습니다. 승인된 일반 부원(임원진 제외)만 지정할 수 있습니다.'
+          : '졸업을 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      )
+    }
     await load()
   }
 
@@ -429,6 +452,7 @@ export default function Admin() {
                 {handle}
                 <span className="name">
                   {p.name} <span className={p.role === 'officer' ? 'badge' : 'badge muted'}>{ROLE_LABEL[p.role]}</span>
+                  {alumni.has(p.id) && <span className="badge muted">졸업</span>}
                   {p.id === me.id && <span className="badge muted">나</span>}
                   <PersonMeta info={privates[p.id]} />
                   <ApplicationView app={applications[p.id]} open={false} />
@@ -438,10 +462,21 @@ export default function Admin() {
                 <button
                   className="btn btn-sm btn-ghost"
                   disabled={busyId === p.id}
-                  onClick={() => update(p.id, { role: p.role === 'officer' ? 'member' : 'officer' })}
+                  onClick={() => {
+                    // 졸업생을 임원진으로 올리지 않는다. 먼저 졸업을 해제해야 한다
+                    if (p.role === 'member' && alumni.has(p.id)) {
+                      return setActionError('졸업생은 먼저 졸업을 해제한 뒤 임원진으로 변경해 주세요.')
+                    }
+                    update(p.id, { role: p.role === 'officer' ? 'member' : 'officer' })
+                  }}
                 >
                   {p.role === 'officer' ? '부원으로 변경' : '임원진으로 변경'}
                 </button>
+                {p.role === 'member' && (
+                  <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => toggleAlumni(p)}>
+                    {alumni.has(p.id) ? '졸업 해제' : '졸업 지정'}
+                  </button>
+                )}
                 {p.role === 'member' && p.id !== me.id && (
                   <button className="btn btn-sm btn-ghost" disabled={busyId === p.id} onClick={() => removeMember(p)}>
                     탈퇴

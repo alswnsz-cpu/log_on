@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
+import { useAlumniIds } from '../lib/alumni'
 import ScheduleGrid from '../components/ScheduleGrid'
 import type { MyBlock } from '../components/ScheduleGrid'
 
@@ -15,6 +16,7 @@ const COLUMNS = 'id, kind, subject, day, start_min, end_min'
 export default function Members() {
   const { session } = useAuth()
   const myId = session!.user.id
+  const alumni = useAlumniIds()
   const [members, setMembers] = useState<MemberRow[]>([])
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
   /** 시간표를 비공개로 설정한 부원 */
@@ -104,6 +106,7 @@ export default function Members() {
             >
               {m.name}
               {m.id === myId ? ' (나)' : ''}
+              {alumni.has(m.id) ? ' · 졸업' : ''}
               {doneIds.has(m.id) ? '' : ' · 미입력'}
               {m.id !== myId && privateIds.has(m.id) ? ' · 비공개' : ''}
             </button>

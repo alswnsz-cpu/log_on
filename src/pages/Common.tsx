@@ -54,15 +54,19 @@ export default function Common() {
   useEffect(() => {
     let alive = true
     async function load() {
-      const [p, b, s] = await Promise.all([
+      const [p, b, s, al] = await Promise.all([
         supabase.from('profiles').select('id, name').eq('status', 'approved').order('name'),
         fetchBusy(),
         supabase.from('schedule_status').select('user_id'),
+        supabase.from('member_alumni').select('user_id'),
       ])
       if (!alive) return
-      if (p.error || b.error || s.error) setError('공통 시간 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      // 졸업생을 빼지 못하면 계산이 틀리므로, 졸업 표시를 못 읽었을 때도 오류로 처리한다
+      if (p.error || b.error || s.error || al.error) setError('공통 시간 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
       else {
-        setMembers(p.data as Member[])
+        // 졸업생은 공통 시간 찾기와 "전원 가능" 계산에서 제외한다
+        const alumniIds = new Set((al.data as { user_id: string }[]).map((r) => r.user_id))
+        setMembers((p.data as Member[]).filter((m) => !alumniIds.has(m.id)))
         setBlocks(b.data)
         setDoneIds(new Set((s.data as { user_id: string }[]).map((r) => r.user_id)))
       }

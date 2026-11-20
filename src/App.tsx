@@ -20,23 +20,27 @@ import Admin from './pages/Admin'
 import Withdraw from './pages/Withdraw'
 import Profile from './pages/Profile'
 
-/** 승인된 사용자의 앱. 시간표 "입력 완료"를 누르기 전에는 내 시간표(와 임원진의 관리 화면)만 열린다. */
+/**
+ * 승인된 사용자의 앱. 시간표 "입력 완료"를 누르기 전에는 내 시간표(와 임원진의 관리 화면)만 열린다.
+ * 졸업생은 시간표를 입력하지 않으므로 이 관문 없이 모든 화면이 열린다.
+ */
 function ApprovedApp({ userId }: { userId: string }) {
   const [done, setDone] = useState<boolean | null>(null)
+  const [alumni, setAlumni] = useState(false)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let alive = true
-    supabase
-      .from('schedule_status')
-      .select('user_id')
-      .eq('user_id', userId)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (!alive) return
-        if (error) setFailed(true)
-        else setDone(Boolean(data))
-      })
+    Promise.all([
+      supabase.from('schedule_status').select('user_id').eq('user_id', userId).maybeSingle(),
+      supabase.from('member_alumni').select('user_id').eq('user_id', userId).maybeSingle(),
+    ]).then(([s, a]) => {
+      if (!alive) return
+      if (s.error) return setFailed(true)
+      // 졸업 표시를 못 읽어도 앱 전체를 막지 않고 현재 부원으로 본다
+      setAlumni(!a.error && Boolean(a.data))
+      setDone(Boolean(s.data))
+    })
     return () => {
       alive = false
     }
@@ -67,11 +71,14 @@ function ApprovedApp({ userId }: { userId: string }) {
     )
   }
 
+  /** 화면 전체가 열리는 상태: 시간표 입력을 마쳤거나 졸업생이다 */
+  const open = done || alumni
+
   return (
     <Routes>
-      <Route element={<Layout locked={!done} />}>
+      <Route element={<Layout locked={!open} alumni={alumni} />}>
         <Route path="schedule" element={<Schedule done={done} onComplete={complete} />} />
-        {done && (
+        {open && (
           <>
             <Route index element={<Calendar />} />
             <Route path="common" element={<Common />} />
@@ -87,7 +94,7 @@ function ApprovedApp({ userId }: { userId: string }) {
         <Route path="admin" element={<Admin />} />
         <Route path="withdraw" element={<Withdraw />} />
         <Route path="profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to={done ? '/' : '/schedule'} replace />} />
+        <Route path="*" element={<Navigate to={open ? '/' : '/schedule'} replace />} />
       </Route>
     </Routes>
   )
