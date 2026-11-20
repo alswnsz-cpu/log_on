@@ -41,8 +41,8 @@ export const AREAS: Area[] = [
     description: '토론과 결론, 활동 사진을 모아 봐요.',
     paths: ['/agendas', '/decisions', '/archive'],
     items: [
+      // 결론은 토론 화면의 "확정 및 결론" 탭으로 합쳤다(예전 /decisions 주소는 그 탭으로 이동한다)
       { label: '토론', to: '/agendas' },
-      { label: '결론', to: '/decisions' },
       { label: '아카이브', to: '/archive' },
     ],
   },

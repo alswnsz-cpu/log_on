@@ -1341,6 +1341,19 @@ a.hub-card:focus-visible {
   }
 }
 
+/* 탭 아래 내용 묶음: 본문(.container)과 같은 간격으로 카드를 쌓는다 */
+.tab-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .tab-panel {
+    gap: 20px;
+  }
+}
+
 /* 휴대폰 헤더: 버튼(관리·내 정보·로그아웃)이 넘치면 아래 줄로 내려간다 */
 @media (max-width: 480px) {
   .header-row {

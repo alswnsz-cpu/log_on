@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { authorName, formatDateTime, useRealtimeRefresh } from '../lib/agendas'
 
@@ -11,7 +11,9 @@ interface Row {
   profiles: { name: string; status: string } | null
 }
 
-export default function Decisions() {
+/** 토론 화면의 "확정 및 결론" 탭 내용. 확정된 안건의 결론을 검색하고 정렬해서 본다. */
+export default function DecisionBoard() {
+  const location = useLocation()
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -51,8 +53,7 @@ export default function Decisions() {
   return (
     <>
       <section className="card">
-        <h2>결론 요약</h2>
-        <div className="form" style={{ marginTop: 8 }}>
+        <div className="form">
           <input placeholder="토론·결론 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
           <select value={sort} onChange={(e) => setSort(e.target.value as 'new' | 'old')}>
             <option value="new">최근 확정순</option>
@@ -71,7 +72,12 @@ export default function Decisions() {
       ) : (
         <div className="card-grid">
           {shown.map((r) => (
-            <Link key={r.agenda_id} to={`/agendas/${r.agenda_id}`} className="card agenda-card">
+            <Link
+              key={r.agenda_id}
+              to={`/agendas/${r.agenda_id}`}
+              state={{ back: location.pathname + location.search }}
+              className="card agenda-card"
+            >
               <h2>{r.agendas?.title ?? '(삭제된 토론)'}</h2>
               <p className="decision-text">{r.content}</p>
               <p className="hint">

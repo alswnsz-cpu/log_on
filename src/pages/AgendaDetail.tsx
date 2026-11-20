@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import StanceBar from '../components/StanceBar'
@@ -37,6 +37,10 @@ export default function AgendaDetail() {
   const { id } = useParams()
   const agendaId = Number(id)
   const navigate = useNavigate()
+  const location = useLocation()
+  // 토론 목록(탭)에서 들어왔다면 그 탭으로 돌아간다. 주소로 바로 열었으면 토론 전체 목록으로 간다.
+  const fromList = (location.state as { back?: unknown } | null)?.back
+  const back = typeof fromList === 'string' && fromList.startsWith('/agendas') ? fromList : '/agendas'
   const { profile } = useAuth()
   const dialog = useDialog()
   const isOfficer = profile?.role === 'officer'
@@ -120,7 +124,7 @@ export default function AgendaDetail() {
     return (
       <section className="card">
         <h2>토론을 찾을 수 없습니다</h2>
-        <p><Link to="/agendas">토론 목록으로</Link></p>
+        <p><Link to={back}>토론 목록으로</Link></p>
       </section>
     )
   }
@@ -186,7 +190,7 @@ export default function AgendaDetail() {
     const { error: err } = await supabase.from('agendas').delete().eq('id', agendaId)
     setBusy(false)
     if (err) return setError('토론을 삭제하지 못했습니다.')
-    navigate('/agendas')
+    navigate(back)
   }
 
   async function reopenAgenda() {
@@ -229,7 +233,7 @@ export default function AgendaDetail() {
 
   return (
     <>
-      <p><Link to="/agendas" className="hint">← 토론 목록</Link></p>
+      <p><Link to={back} className="hint">← 토론 목록</Link></p>
 
       <section className="card">
         {editing ? (

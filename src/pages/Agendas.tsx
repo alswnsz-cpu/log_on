@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import StanceBar from '../components/StanceBar'
@@ -8,18 +8,23 @@ import {
   STATUS_LABEL,
   useRealtimeRefresh,
   type Agenda,
-  type AgendaStatus,
   type Stance,
   type StanceCounts,
 } from '../lib/agendas'
+import DecisionBoard from './Decisions'
 
-type Filter = 'all' | AgendaStatus
+type Tab = 'all' | 'discussing' | 'decided'
 
-const FILTERS: [Filter, string][] = [
+const TABS: [Tab, string][] = [
   ['all', '전체'],
   ['discussing', '토론 중'],
-  ['decided', '확정'],
+  ['decided', '확정 및 결론'],
 ]
+
+/** 주소의 ?tab= 값. 없거나 잘못된 값이면 전체 */
+function parseTab(value: string | null): Tab {
+  return value === 'discussing' || value === 'decided' ? value : 'all'
+}
 
 export default function Agendas() {
   const { profile } = useAuth()
@@ -28,7 +33,13 @@ export default function Agendas() {
   const [counts, setCounts] = useState<Record<number, StanceCounts>>({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<Filter>('all')
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = parseTab(searchParams.get('tab'))
+  /** 탭을 바꾸면 주소(?tab=)가 바뀌어 새로고침하거나 링크를 공유해도 같은 탭이 열린다. 브라우저 기록은 쌓지 않는다. */
+  function selectTab(next: Tab) {
+    setSearchParams(next === 'all' ? {} : { tab: next }, { replace: true })
+  }
 
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -78,7 +89,12 @@ export default function Agendas() {
     await load()
   }
 
-  const shown = agendas.filter((a) => filter === 'all' || a.status === filter)
+  const shown = agendas.filter((a) => tab === 'all' || a.status === tab)
+  const countOf = (t: Tab) => (t === 'all' ? agendas.length : agendas.filter((a) => a.status === t).length)
+  // 불러오는 중이거나 불러오지 못했을 때는 건수가 틀려 보이지 않게 숨긴다
+  const showCounts = !loading && !loadError
+  /** 안건 상세의 "← 토론 목록"이 지금 탭으로 돌아오게 넘기는 주소 */
+  const backTo = location.pathname + location.search
 
   return (
     <>
@@ -107,39 +123,57 @@ export default function Agendas() {
             </div>
           </form>
         )}
-        <div className="day-picker" style={{ marginTop: 12 }}>
-          {FILTERS.map(([k, label]) => (
-            <button key={k} className={filter === k ? 'chip on' : 'chip'} onClick={() => setFilter(k)}>
+        <div className="day-picker" role="tablist" aria-label="토론 보기" style={{ marginTop: 12 }}>
+          {TABS.map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              id={`agenda-tab-${k}`}
+              aria-selected={tab === k}
+              aria-controls="agenda-tab-panel"
+              className={tab === k ? 'chip on' : 'chip'}
+              onClick={() => selectTab(k)}
+            >
               {label}
+              {showCounts ? ` ${countOf(k)}` : ''}
             </button>
           ))}
         </div>
       </section>
 
-      {loadError && <p className="msg error" role="alert">{loadError}</p>}
-      {loading ? (
-        <section className="card"><p>불러오는 중...</p></section>
-      ) : shown.length === 0 ? (
-        <section className="card">
-          <p>{agendas.length === 0 ? '아직 등록된 토론이 없습니다.' : '해당 상태의 토론이 없습니다.'}</p>
-        </section>
-      ) : (
-        <div className="card-grid">
-          {shown.map((a) => {
-            const c = counts[a.id] ?? { agree: 0, disagree: 0, hold: 0 }
-            return (
-              <Link key={a.id} to={`/agendas/${a.id}`} className="card agenda-card">
-                <div className="section-head">
-                  <h2>{a.title}</h2>
-                  <span className={a.status === 'decided' ? 'badge ok' : 'badge'}>{STATUS_LABEL[a.status]}</span>
-                </div>
-                <p className="hint">의견 {c.agree + c.disagree + c.hold}개</p>
-                <StanceBar counts={c} />
-              </Link>
-            )
-          })}
-        </div>
-      )}
+      <div role="tabpanel" id="agenda-tab-panel" aria-labelledby={`agenda-tab-${tab}`} className="tab-panel">
+        {tab === 'decided' ? (
+          <DecisionBoard />
+        ) : (
+          <>
+            {loadError && <p className="msg error" role="alert">{loadError}</p>}
+            {loading ? (
+              <section className="card"><p>불러오는 중...</p></section>
+            ) : shown.length === 0 ? (
+              <section className="card">
+                <p>{agendas.length === 0 ? '아직 등록된 토론이 없습니다.' : '해당 상태의 토론이 없습니다.'}</p>
+              </section>
+            ) : (
+              <div className="card-grid">
+                {shown.map((a) => {
+                  const c = counts[a.id] ?? { agree: 0, disagree: 0, hold: 0 }
+                  return (
+                    <Link key={a.id} to={`/agendas/${a.id}`} state={{ back: backTo }} className="card agenda-card">
+                      <div className="section-head">
+                        <h2>{a.title}</h2>
+                        <span className={a.status === 'decided' ? 'badge ok' : 'badge'}>{STATUS_LABEL[a.status]}</span>
+                      </div>
+                      <p className="hint">의견 {c.agree + c.disagree + c.hold}개</p>
+                      <StanceBar counts={c} />
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </>
   )
 }
