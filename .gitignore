@@ -35,4 +35,7 @@ dist-ssr
 supabase/migrate_existing_accounts_*.sql
 supabase/seed_officer.sql
 
+# 개편 때 참고하는 원본 프로젝트(LOG:ON 등). 저장소에는 올리지 않는다
+reference/
+
 .vercel

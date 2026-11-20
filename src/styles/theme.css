@@ -84,7 +84,9 @@ a {
   opacity: 0.85;
 }
 
-.nav {
+/* 영역 메뉴: 1000px 미만은 위쪽 가로 칩 줄, 1000px 이상은 파일 끝의 규칙이 왼쪽 세로 사이드바로 바꾼다 */
+.area-nav {
+  position: relative;
   display: flex;
   gap: 4px;
   overflow-x: auto;
@@ -93,7 +95,7 @@ a {
   margin: 0 auto;
 }
 
-.nav a {
+.area-nav a {
   flex: none;
   padding: 8px 14px;
   border-radius: 999px;
@@ -103,19 +105,19 @@ a {
   white-space: nowrap;
 }
 
-.nav a.active {
+.area-nav a.active {
   background: var(--purple-600);
   color: #fff;
 }
 
-/* 휴대폰에서는 메뉴 6개(관리 포함)가 한 줄에 들어오도록 좁힌다 */
+/* 휴대폰에서는 칩을 조금 좁혀 더 많이 보이게 한다(넘치면 옆으로 스크롤) */
 @media (max-width: 480px) {
-  .nav {
+  .area-nav {
     gap: 3px;
     padding: 12px 12px 0;
   }
 
-  .nav a {
+  .area-nav a {
     padding: 8px 10px;
     font-size: 0.85rem;
   }
@@ -1048,12 +1050,12 @@ textarea:focus {
     gap: 20px;
   }
 
-  .nav {
+  .area-nav {
     gap: 6px;
     padding: 16px 24px 0;
   }
 
-  .nav a {
+  .area-nav a {
     padding: 10px 18px;
     font-size: 1rem;
   }
@@ -1169,7 +1171,7 @@ textarea:focus {
     min-height: 40px;
   }
 
-  .nav a {
+  .area-nav a {
     display: inline-flex;
     align-items: center;
     min-height: 40px;
@@ -1261,4 +1263,155 @@ textarea:focus {
 
 .btn-danger-solid:disabled {
   background: #fca5a5;
+}
+
+/* ===== 허브와 영역 메뉴(사이드바·칩 줄) ===== */
+.brand-link {
+  display: inline-block;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* "← 처음으로" 칩은 메뉴 항목과 구분되게 테두리만 둔다 */
+.area-nav a.area-nav-home {
+  background: transparent;
+  border: 1px solid var(--purple-200);
+}
+
+/* 영역 이름은 사이드바에서만 보인다 */
+.area-nav-title {
+  display: none;
+}
+
+.hub h2 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--purple-900);
+}
+
+.hub-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hub-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 112px;
+  padding: 18px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.hub-card strong {
+  font-size: 1.05rem;
+  color: var(--purple-700);
+}
+
+.hub-card span:not(.badge) {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+a.hub-card:hover {
+  border-color: var(--purple-400);
+}
+
+a.hub-card:focus-visible {
+  outline: 3px solid var(--purple-500);
+  outline-offset: 2px;
+}
+
+/* 아직 화면이 없는 영역 */
+.hub-card-off {
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+/* 폭 360px 이상부터 카드 2열(320px 폰은 1열) */
+@media (min-width: 360px) {
+  .hub-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 휴대폰 헤더: 버튼(관리·내 정보·로그아웃)이 넘치면 아래 줄로 내려간다 */
+@media (max-width: 480px) {
+  .header-row {
+    flex-wrap: wrap;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hub-grid {
+    gap: 16px;
+  }
+
+  .hub-card {
+    padding: 22px 20px;
+  }
+}
+
+/* ===== 데스크톱(1000px 이상): 영역 메뉴를 왼쪽 세로 사이드바로 ===== */
+@media (min-width: 1000px) {
+  .hub-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* 사이드바(220px) + 간격(24px)만큼 헤더와 본문 폭을 넓혀 왼쪽 끝을 맞춘다 */
+  .app-header.has-nav .header-row {
+    max-width: calc(var(--page-max) + 244px);
+  }
+
+  .app-shell.has-nav {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
+    max-width: calc(var(--page-max) + 244px + 32px);
+    margin: 0 auto;
+    padding: 16px 16px 0;
+  }
+
+  .app-shell.has-nav .container {
+    max-width: none;
+    margin: 0;
+    padding: 0 0 24px;
+  }
+
+  .area-nav {
+    position: sticky;
+    top: 16px;
+    flex-direction: column;
+    overflow: visible;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    gap: 4px;
+  }
+
+  .area-nav-title {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--purple-900);
+  }
+
+  .area-nav a {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+  }
 }

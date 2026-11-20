@@ -7,6 +7,7 @@ import AuthScreen from './auth/AuthScreen'
 import StatusScreen from './auth/StatusScreen'
 import Layout from './components/Layout'
 import Calendar from './pages/Calendar'
+import Hub from './pages/Hub'
 import Schedule from './pages/Schedule'
 import Common from './pages/Common'
 import Members from './pages/Members'
@@ -80,7 +81,8 @@ function ApprovedApp({ userId }: { userId: string }) {
         <Route path="schedule" element={<Schedule done={done} onComplete={complete} />} />
         {open && (
           <>
-            <Route index element={<Calendar />} />
+            <Route index element={<Hub alumni={alumni} />} />
+            <Route path="calendar" element={<Calendar />} />
             <Route path="common" element={<Common />} />
             <Route path="members" element={<Members />} />
             <Route path="agendas" element={<Agendas />} />
