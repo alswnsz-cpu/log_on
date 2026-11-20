@@ -9,6 +9,8 @@ const links = [
   { to: '/members', label: '멤버별' },
   { to: '/agendas', label: '토론' },
   { to: '/decisions', label: '결론' },
+  { to: '/archive', label: '아카이브' },
+  { to: '/portfolio', label: '포트폴리오' },
 ]
 
 /** locked: 시간표 입력 완료 전이라 내 시간표 메뉴만 보여 준다. */

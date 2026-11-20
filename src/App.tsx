@@ -13,6 +13,9 @@ import Members from './pages/Members'
 import Agendas from './pages/Agendas'
 import AgendaDetail from './pages/AgendaDetail'
 import Decisions from './pages/Decisions'
+import Archive from './pages/Archive'
+import AlbumDetail from './pages/AlbumDetail'
+import Portfolio from './pages/Portfolio'
 import Admin from './pages/Admin'
 import Withdraw from './pages/Withdraw'
 import Profile from './pages/Profile'
@@ -76,6 +79,9 @@ function ApprovedApp({ userId }: { userId: string }) {
             <Route path="agendas" element={<Agendas />} />
             <Route path="agendas/:id" element={<AgendaDetail />} />
             <Route path="decisions" element={<Decisions />} />
+            <Route path="archive" element={<Archive />} />
+            <Route path="archive/:id" element={<AlbumDetail />} />
+            <Route path="portfolio" element={<Portfolio />} />
           </>
         )}
         <Route path="admin" element={<Admin />} />
