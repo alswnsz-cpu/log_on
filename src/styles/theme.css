@@ -1341,6 +1341,28 @@ a.hub-card:focus-visible {
   }
 }
 
+/* 공모전·프로젝트: 진행률 막대 */
+.progress {
+  height: 10px;
+  margin: 8px 0 4px;
+  background: var(--purple-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress > i {
+  display: block;
+  height: 100%;
+  background: var(--purple-600);
+  border-radius: 999px;
+}
+
+.project-sub {
+  margin: 12px 0 4px;
+  font-size: 0.95rem;
+  color: var(--purple-700);
+}
+
 /* 콘텐츠 플래너: 게시물 목록과 상태 표시 */
 .post-list {
   display: grid;

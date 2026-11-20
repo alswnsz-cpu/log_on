@@ -18,7 +18,8 @@
 | 3 | feat/overhaul-3-weekly-calendar | 49490b6 |
 | 4 | feat/overhaul-4-sites | c82dc50 |
 | 5 | feat/overhaul-5-meeting-notes | 7a6b07b |
-| 6 | feat/overhaul-6-content-planner | (다음 단계에서 기록) |
+| 6 | feat/overhaul-6-content-planner | 4fe775b |
+| 7 | feat/overhaul-7-records | (다음 단계에서 기록) |
 
 ## 0단계: 2단계 작업 커밋
 - 브랜치 `feat/overhaul-2-discussion-tabs`, 커밋 `3c3e5e3` "개편 2단계: 토론 탭(전체·토론 중·확정 및 결론)".
@@ -114,3 +115,35 @@
   - 주간 칸은 월~일이다(계획대로). 3단계 달력의 일~토와는 다르다.
   - 자료 링크는 http(s)만 허용하고 화면에서도 같은 검사 후에만 링크로 연다.
 - 못 한 것: SQL은 실행하지 못했다(규칙상 접속 금지). 화면 모양과 한국 시간 경계의 실제 동작은 직접 확인하지 못했다. 빌드와 린트만 통과했다.
+
+## 7단계: 활동 기록, 공모전·프로젝트, 개별 노트
+- 브랜치 `feat/overhaul-7-records` (6단계 브랜치 위).
+- 변경 파일: `src/App.tsx`, `src/lib/areas.ts`, `src/pages/AgendaDetail.tsx`, `src/styles/theme.css`, `OVERNIGHT.md`, `HANDOVER.md`.
+- 새 파일: `src/pages/ActivityRecords.tsx`, `src/pages/Projects.tsx`, `src/pages/Notes.tsx`, `src/components/NoteItem.tsx`, `src/components/AgendaNote.tsx`, `src/lib/activityRecords.ts`, `supabase/add_activity_records.sql`, `supabase/add_projects.sql`, `supabase/add_notes.sql`, `supabase/copy_activities_to_records.sql`.
+- **새 SQL과 실행 순서**:
+  1. 실행 전에 PLAN.md 8-6의 "처음 한 번" 백업(CSV)을 하고, 복사 전에 `activities`도 CSV로 받아 둔다.
+  2. `supabase/add_activity_records.sql` (테이블 `activity_records`, 본인만).
+  3. (선택, 내가 직접 실행) `supabase/copy_activities_to_records.sql` — 포트폴리오의 기존 `activities`를 `activity_records`로 복사만 한다. 원본은 그대로 두고, 여러 번 실행해도 이미 복사한 행은 건너뛴다. 이 SQL은 모든 부원의 활동을 각자의 user_id로 복사한다.
+  4. `supabase/add_projects.sql` (테이블 `projects`, `project_members`).
+  5. `supabase/add_notes.sql` (테이블 `notes`).
+  6. 프론트를 배포한다. 2·4·5번은 서로 의존하지 않아 순서는 바꿔도 된다.
+  - **되돌리기**: 프론트를 먼저 되돌린 뒤 각 파일 끝 주석의 `drop table`을 실행한다. 복사만 되돌리려면 `copy_activities_to_records.sql` 끝 주석(`source_activity_id`가 있는 행만 삭제)을 쓴다. 원본 `activities`는 어떤 경우에도 건드리지 않는다.
+- 한 일:
+  - 활동 기록 영역 메뉴를 "활동 기록 / 공모전·프로젝트 / 토론 / 개별 노트 / 아카이브"로 늘렸다. 허브의 활동 기록 카드는 이제 활동 기록(`/records`)으로 간다.
+  - 활동 기록(`/records`): 활동 이름, 분류, 내 역할, 기간, 한 일, 결과를 적고 수정·삭제한다. 본인만 보인다(DB도 본인 것만 허용).
+  - 공모전·프로젝트(`/projects`): 읽기는 모두. 임원진은 프로젝트 만들기·수정(진행률 0~100)·삭제와 참여 부원 추가·내보내기. 참여한 부원은 "내 역할"만 직접 고친다(DB가 `role_text` 칸만 허용).
+  - 개별 노트(`/notes`): 나만 보는 노트 모음. 토론에 연결해서 쓰거나 연결 없이 쓰고, 토론별로 걸러 볼 수 있다.
+  - 안건 상세에 "내 메모(나만 보임)" 카드를 의견 카드와 "내 의견 남기기" 카드 사이에 넣었다. 확정 여부와 상관없이 쓸 수 있도록 확정 잠금 분기 바깥에 두었다. 메모를 불러오지 못해도 토론 화면의 다른 부분은 그대로 동작한다.
+- 확인할 화면과 계정(SQL 실행 후):
+  - 모든 계정(임원진·부원·졸업생): 활동 기록 추가·수정·삭제가 되고 다른 사람 것은 안 보이는지(졸업생도 쓸 수 있다). 개별 노트도 같다. 안건 상세에서 "내 메모"를 적고, 확정된 안건에서도 적히는지.
+  - 임원진: 프로젝트 만들기·수정·삭제, 진행률 막대, 참여 부원 추가·내보내기.
+  - 참여 중인 일반 부원: 프로젝트 카드에서 "내 역할"만 저장되고 다른 칸 수정 버튼은 없어야 한다. 참여하지 않은 부원은 읽기만.
+  - 폭: 320/360/390px에서 카드와 폼이 겹치지 않는지.
+  - 복사 SQL 실행 후: 활동 기록에 예전 포트폴리오 활동이 나타나는지.
+- 결정 사항:
+  - 프로젝트 진행률은 임원진만 고친다(진행률을 누가 고칠지 정해진 말이 없어 가장 단순하고 안전한 쪽으로 했다).
+  - 참여 부원은 임원진이 추가한다. 부원이 스스로 참여하는 기능은 만들지 않았다. 이유: 요청에 "프로젝트 쓰기=임원진, 내 역할은 본인 행만"이라고 되어 있어서.
+  - `activity_records`의 열은 기존 `activities`와 같은 이름(`started_on`, `ended_on` 등)에 `role_text`, `outcome`, `source_activity_id`를 더했다. 이유: 복사 SQL이 단순해지고 되돌릴 때 복사본만 골라낼 수 있어서.
+  - 토론이 지워지면 노트는 남도록 `agenda_id`를 `on delete set null`로 했다.
+  - 활동 기록·노트·프로젝트는 졸업생에게도 보인다(숨김 표시 없음). 졸업생도 포트폴리오를 계속 쓸 수 있어야 해서.
+- 못 한 것: SQL은 실행하지 못했다(규칙상 접속 금지). 화면 모양도 직접 확인하지 못했다.

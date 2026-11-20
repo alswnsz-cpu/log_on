@@ -41,11 +41,14 @@ export const AREAS: Area[] = [
   {
     key: 'records',
     label: '활동 기록',
-    description: '토론과 결론, 활동 사진을 모아 봐요.',
-    paths: ['/agendas', '/decisions', '/archive'],
+    description: '활동 기록과 토론, 활동 사진을 모아 봐요.',
+    paths: ['/records', '/projects', '/agendas', '/decisions', '/notes', '/archive'],
     items: [
+      { label: '활동 기록', to: '/records' },
+      { label: '공모전·프로젝트', to: '/projects' },
       // 결론은 토론 화면의 "확정 및 결론" 탭으로 합쳤다(예전 /decisions 주소는 그 탭으로 이동한다)
       { label: '토론', to: '/agendas' },
+      { label: '개별 노트', to: '/notes' },
       { label: '아카이브', to: '/archive' },
     ],
   },

@@ -20,6 +20,9 @@ import Sites from './pages/explore/Sites'
 import MeetingNotes from './pages/MeetingNotes'
 import ContentPlanner from './pages/ContentPlanner'
 import ContentTasks from './pages/ContentTasks'
+import ActivityRecords from './pages/ActivityRecords'
+import Projects from './pages/Projects'
+import Notes from './pages/Notes'
 import Admin from './pages/Admin'
 import Withdraw from './pages/Withdraw'
 import Profile from './pages/Profile'
@@ -91,6 +94,9 @@ function ApprovedApp({ userId }: { userId: string }) {
             <Route path="meetings" element={<MeetingNotes />} />
             <Route path="content" element={<ContentPlanner />} />
             <Route path="tasks" element={<ContentTasks />} />
+            <Route path="records" element={<ActivityRecords />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="notes" element={<Notes />} />
             <Route path="agendas" element={<Agendas />} />
             <Route path="agendas/:id" element={<AgendaDetail />} />
             {/* 예전 결론 주소: 저장된 링크가 열리도록 토론의 "확정 및 결론" 탭으로 보낸다 */}

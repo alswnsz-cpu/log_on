@@ -49,3 +49,11 @@
   4. 화면의 `canManage`(`src/pages/ContentPlanner.tsx`, `ContentTasks.tsx`)가 임원진만 보도록 되어 있으니 팀장도 보이도록 고친다. 화면은 편의일 뿐이고 실제 권한은 DB 함수가 막는다.
   5. 부원 관리 화면에 팀장 지정 토글을 만든다(`Admin.tsx`의 졸업 지정과 같은 방식).
 - 알려진 한계: 담당자가 졸업생이 되면 그 게시물을 고칠 때 담당자를 다시 지정해야 한다.
+
+## 7단계: 활동 기록, 공모전·프로젝트, 개별 노트
+- 활동 기록(`/records`, 테이블 `activity_records`)은 내가 한 활동을 적는 곳이다. 본인만 읽고 쓰며 임원진도 다른 사람 것은 볼 수 없다. 8단계의 포트폴리오 문장 생성이 이 기록을 쓴다.
+- 기존 포트폴리오의 `activities`는 지우지 않는다. `supabase/copy_activities_to_records.sql`로 `activity_records`에 복사만 하고, 복사본에는 `source_activity_id`가 채워진다(여러 번 실행해도 중복되지 않는다). 복사를 되돌리려면 그 파일 끝 주석의 문장으로 복사본만 지운다.
+- 공모전·프로젝트(`/projects`, 테이블 `projects`, `project_members`): 읽기는 승인된 사용자, 프로젝트 만들기·수정·삭제와 참여 부원 추가·내보내기는 임원진이다. 참여한 부원은 자기 행의 "내 역할"(`role_text`)만 직접 고친다. DB가 컬럼 단위 권한으로 다른 칸 수정을 막는다. 진행률(0~100)은 임원진만 고친다.
+- 개별 노트(`/notes`, 테이블 `notes`)는 나만 보는 메모다. 토론(`agenda_id`)에 연결해도 되고 안 해도 된다. 안건 상세의 "내 메모(나만 보임)" 카드(`AgendaNote.tsx`)도 같은 테이블을 쓴다. 이 카드는 확정 여부와 상관없이 쓸 수 있고, 안건 의견 카드와 "내 의견 남기기" 카드 사이에 있다.
+- SQL 실행 순서: `add_activity_records.sql` → (선택) `copy_activities_to_records.sql`, `add_projects.sql`, `add_notes.sql` → 프론트. 서로 의존하지 않아 앞의 세 파일은 순서를 바꿔도 된다(복사 파일만 `add_activity_records.sql` 뒤여야 한다). 되돌리기는 각 파일 끝 주석에 있다.
+- 졸업생: 활동 기록, 공모전·프로젝트 읽기, 개별 노트, 안건 메모 모두 쓸 수 있다(숨김 표시 없음).

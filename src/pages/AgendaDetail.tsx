@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import StanceBar from '../components/StanceBar'
 import { useDialog } from '../components/dialog-context'
+import AgendaNote from '../components/AgendaNote'
 import { useAlumniIds } from '../lib/alumni'
 import {
   authorName,
@@ -336,6 +337,9 @@ export default function AgendaDetail() {
           </ul>
         )}
       </section>
+
+      {/* 내 메모는 확정 여부와 상관없이 쓸 수 있어서 확정 잠금 분기 바깥에 둔다 */}
+      <AgendaNote agendaId={agendaId} />
 
       {locked ? (
         <section className="card">
