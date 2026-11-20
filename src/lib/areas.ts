@@ -27,12 +27,13 @@ export const AREAS: Area[] = [
     key: 'plan',
     label: '활동 일정',
     description: '달력과 시간표, 공통 시간을 확인해요.',
-    paths: ['/calendar', '/schedule', '/common', '/members'],
+    paths: ['/calendar', '/schedule', '/common', '/members', '/meetings'],
     items: [
       { label: '달력', to: '/calendar' },
       { label: '내 시간표', to: '/schedule', hideForAlumni: true },
       { label: '공통 시간', to: '/common', hideForAlumni: true },
       { label: '멤버별', to: '/members' },
+      { label: '회의 변경 이력', to: '/meetings' },
     ],
   },
   {
