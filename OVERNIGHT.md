@@ -1,5 +1,56 @@
 # 밤샘 작업 기록 (2026-11-21)
 
+## 전체 요약 (최종, 10단계 마무리 시점)
+
+### 단계별 결과
+빌드와 린트는 밤샘 3~9단계 모두 **처음 시도에 통과**했다(3번 시도가 필요했던 단계 없음). 건너뛴 단계는 없다.
+처음 밤샘 요청은 8단계에서 잘려 있었고, 9단계와 10단계는 이어진 별도 요청으로 진행했다.
+
+| 단계 | 내용 | 결과 | 브랜치 | 커밋 |
+|---|---|---|---|---|
+| 1 | 허브·영역 메뉴·헤더 | 성공(사용자 화면 확인 완료) | feat/overhaul-1-shell | 2420521 |
+| 2(0단계) | 토론 탭 | 성공(화면 확인 전) | feat/overhaul-2-discussion-tabs | 3c3e5e3 |
+| 3 | 주간 달력·공통 시간 확인 | 성공(화면 확인 전) | feat/overhaul-3-weekly-calendar | 49490b6 |
+| 4 | 사이트 정리 | 성공(화면 확인 전) | feat/overhaul-4-sites | c82dc50 |
+| 5 | 회의 변경 이력 | 성공(SQL 미실행) | feat/overhaul-5-meeting-notes | 7a6b07b |
+| 6 | 콘텐츠 플래너·권한 함수 | 성공(SQL 미실행) | feat/overhaul-6-content-planner | 4fe775b |
+| 7 | 활동 기록·프로젝트·노트 | 성공(SQL 미실행) | feat/overhaul-7-records | 8100cbc |
+| 8 | 직무별 포트폴리오 | 성공(SQL 미실행) | feat/overhaul-8-portfolio | 9ad4b23(문서 a031520) |
+| 9 | 교내·대외활동 자동 수집 | 성공(SQL·환경변수·Vercel 실행 미확인) | feat/overhaul-9-activity-feed | 6e5a17b |
+| 10 | 인수인계 문서 | 성공 | feat/overhaul-10-handover | `git log -1 --format=%h feat/overhaul-10-handover`로 확인 |
+
+### SQL 실행 순서 최종본
+- **새 DB를 처음부터 만들 때**: 1~29번 전체 표가 `supabase/INDEX.md`와 `HANDOVER.md` 8번에 있다(새 DB 처음부터 실행은 **시험하지 않았다**).
+  요약: `schema.sql` → `add_schedule_status` → `add_signup_application` → `add_member_removal` → `add_withdrawal_request` → `add_password_reset` → `add_events` → `add_event_repeat` → `add_member_events` → `add_unique_colors` → `add_member_order` → `add_member_purge` → `add_event_overrides` → `add_schedule_privacy` → `share_schedules` → `logon_1_portfolio` → `logon_2_albums` → `logon_3_photo_storage` → `add_member_alumni` → `add_member_alumni_remove` → `add_meeting_notes` → `add_content_permissions` → `add_content_posts` → `add_activity_records` → `add_projects` → `add_notes` → `add_portfolio_documents` → `add_activity_feed` → **`remove_signup_code`(마지막)**.
+  새 DB에서 실행하지 않는 파일: `fix_signup_trigger`, `fix_username_login`, `fix_reopen_agenda`(지금 `schema.sql`에 포함), `add_logon_tables`(쪼개기 전 원본), `copy_*`(옛 데이터 복사용), 개인정보가 있어 저장소에 없는 `migrate_existing_accounts_*`, `seed_officer`.
+- **지금 운영 중인 DB에서 아직 실행하지 않은 것**(순서대로, 실행 전 백업):
+  1. `add_meeting_notes.sql`
+  2. `add_content_permissions.sql` → `add_content_posts.sql`
+  3. `add_activity_records.sql` → (선택) `copy_activities_to_records.sql`
+  4. `add_projects.sql`
+  5. `add_notes.sql`
+  6. `add_portfolio_documents.sql` → (선택) `copy_portfolios_to_documents.sql`
+  7. `add_activity_feed.sql`
+  8. Vercel 환경변수 `SUPABASE_SERVICE_ROLE_KEY` 추가(필요하면 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `MOYEOBOM_API_URL`) 후 다시 배포
+  모두 새 테이블·함수만 추가해서 먼저 실행해도 지금 서비스(main)에는 영향이 없다. **프론트(개편 브랜치)는 SQL을 모두 실행한 뒤에** 배포한다.
+
+### 검토 순서(권장)
+각 브랜치는 앞 단계 위에 쌓여 있어서, 마지막 브랜치(`feat/overhaul-10-handover`)에서 `npm run dev`를 켜면 모든 단계를 한 번에 볼 수 있다. 단계별 코드는 `git diff 앞브랜치..뒷브랜치`로 본다.
+1. 문서부터: `HANDOVER.md`(운영 안내), `supabase/INDEX.md`, `CLAUDE.md`.
+2. 2단계(토론 탭) → 3단계(주간 달력) → 4단계(사이트 정리): SQL 없이 화면만 확인한다.
+3. 5~8단계: 단계별 SQL을 실행한 뒤 해당 화면을 임원진·부원·졸업생 계정으로 확인한다.
+4. 9단계: SQL·환경변수 설정·Preview 배포 후 확인한다(로컬 `npm run dev`로는 확인 불가).
+5. 모두 확인한 뒤 `HANDOVER.md` 9-4의 순서로 `main`에 PR을 올린다.
+
+### 알려진 문제
+- **개편 기능(2~9단계)은 화면과 DB에서 직접 확인하지 못했다.** 빌드·린트와 코드 검토만 했다. 모양(간격·줄바꿈·인쇄 미리보기)이 가장 불확실하다.
+- 새 DB 처음부터 실행하는 순서, 탈퇴·완전 삭제의 데이터 처리 설명(SQL을 읽고 정리)은 시험하지 않았다.
+- 활동 찾기: 서버 함수를 Vercel에서 돌려 보지 못했다(로컬 개발 서버는 `api/`를 실행하지 못함). 모여봄(외부 서비스) 의존, 구글 뉴스 RSS 이용 약관 미확인.
+- 졸업생이 DB 규칙상 부원의 공개 시간표를 읽을 수 있다(메뉴만 숨김). 메뉴 숨김은 주소를 직접 입력하면 열린다.
+- 탈퇴 처리는 포트폴리오·활동 기록·앨범 데이터를 지우지 않는다(완전 삭제를 해야 개인 데이터가 지워지고, 공용 앨범·사진 파일은 남는다).
+- 시험용 DB 없음, 자동 테스트 없음, 번들 크기 경고(500KB 초과), 알림 없음.
+- 저장소가 **공개(Public)** 이다. `.gitignore`가 `steering_demo/`를 막지 못한다(올리지 않았음). 아래 "10단계 저장소 점검"을 본다.
+
 사용자가 자는 동안 질문 없이 진행한 작업의 기록이다. 단계마다 브랜치를 하나씩 남겼고, 앞 단계 브랜치 위에 쌓았다.
 `main`은 건드리지 않았고 어떤 브랜치도 푸시하지 않았다. Supabase에 접속하지 않았고 SQL은 `supabase\` 폴더에 새 파일로만 만들었다(실행은 사용자가 한다).
 
@@ -21,7 +72,8 @@
 | 6 | feat/overhaul-6-content-planner | 4fe775b |
 | 7 | feat/overhaul-7-records | 8100cbc |
 | 8 | feat/overhaul-8-portfolio | 9ad4b23 (문서 정리 a031520) |
-| 9 | feat/overhaul-9-activity-feed | `git log -1 --format=%h feat/overhaul-9-activity-feed`로 확인 |
+| 9 | feat/overhaul-9-activity-feed | 6e5a17b |
+| 10 | feat/overhaul-10-handover | `git log -1 --format=%h feat/overhaul-10-handover`로 확인 |
 
 ## 0단계: 2단계 작업 커밋
 - 브랜치 `feat/overhaul-2-discussion-tabs`, 커밋 `3c3e5e3` "개편 2단계: 토론 탭(전체·토론 중·확정 및 결론)".
@@ -180,7 +232,7 @@
   - 원본에 있던 "백업" 내려받기는 요청 목록에 없어 만들지 않았다.
 - 못 한 것: SQL은 실행하지 못했다(규칙상 접속 금지). 화면 모양과 인쇄 결과는 직접 확인하지 못했다.
 
-## 아침 점검 요약 (마지막에 정리)
+## 아침 점검 요약 (9단계 이전 시점의 요약. 최종본은 맨 위의 "전체 요약")
 
 ### 한눈에
 - 0단계(2단계 커밋)와 3~8단계를 모두 마쳤고, 단계마다 빌드와 린트를 통과시켰다. 3번 시도해야 통과한 단계는 없었다.
@@ -255,3 +307,31 @@
   - 저장본 갱신은 단순 덮어쓰기다(원본의 "더 새로운 때만 갱신" 조건은 두 요청이 동시에 겹칠 때만 의미가 있어 생략했다).
   - 즐겨찾기는 서버 함수 없이 화면이 Supabase에 직접 저장한다(RLS가 본인 행만 허용).
 - 못 한 것: Supabase에 접속하지 못하고 SQL도 실행하지 못했다(규칙상 금지). 서버 함수를 Vercel에서 실제로 돌려 보지 못했고(로컬 `npm run dev`는 `api/`를 실행하지 못한다), 화면 모양도 확인하지 못했다. `vercel dev`로 로컬에서 돌려 볼 수는 있지만 이 환경에서는 쓰지 않았다. 구글 뉴스 RSS의 이용 약관은 확인하지 못했다.
+
+## 10단계: 인수인계 문서
+- 브랜치 `feat/overhaul-10-handover` (9단계 브랜치 위).
+- 변경 파일: `HANDOVER.md`(하나의 인수인계 문서로 다시 씀), `OVERNIGHT.md`(맨 위 전체 요약 갱신).
+- 새 파일: `CLAUDE.md`(저장소 루트에 없어서 새로 만듦), `supabase/INDEX.md`(SQL 실행 순서표와 파일별 설명).
+- SQL 없음. 코드 변경 없음.
+- 한 일: `HANDOVER.md`를 요청한 11개 목차(서비스 소개와 권한표, 구조, 소유권 이전, 설치, 일상 운영, 정기 점검, 장애 대응, 데이터베이스, 배포, 한계와 다음 작업, Claude Code)와 개발자용 부록으로 정리했다. 사람이 직접 해야 하는 일은 "[직접 할 일]" 표시와 3번의 체크리스트로 모았고, 아직 확인하지 못한 기능에는 "[검증 전]"을 붙였다.
+- 확인할 것(사람): `HANDOVER.md`를 후임이 소리 내어 따라 읽으며 모르는 말이 있는지, Supabase·Vercel·GitHub의 실제 화면 이름이 문서와 맞는지(문서에 "화면 이름은 달라질 수 있다"고 적어 둠), 3번 체크리스트 순서가 현실적인지.
+- 결정 사항:
+  - 새 DB 실행 순서에서 `fix_signup_trigger.sql`, `fix_username_login.sql`, `fix_reopen_agenda.sql`을 뺐다. 이유: 지금 `schema.sql`이 이미 같은 내용(아이디·전화번호 열, 가입 트리거, 안건 상태 보호)을 포함해서, 새 DB에서 또 실행하면 "이미 있다" 오류가 날 것이 확실하다. 다만 새 DB에서 시험해 보지는 않아서 "검증 전"으로 표시했다.
+  - `remove_signup_code.sql`은 사용자가 정한 대로 **마지막**에 두었다(29번). 이 파일은 가입 코드 검사가 없는 최신 `validate_signup`이다.
+  - 개편 반영은 마지막 브랜치로 PR 하나를 올리는 방식으로 안내했다(브랜치가 앞 단계를 모두 포함하므로).
+  - 소유권 이전·백업·복구 방법의 화면 이름은 서비스가 바뀔 수 있어서 "비슷한 이름의 메뉴를 찾으라"고 적었고, 요금제·한도 숫자(예: 무료 플랜 저장 용량, 일시정지 기간)는 단정하지 않고 "대시보드에서 확인"으로 적었다.
+- 못 한 것: Supabase·Vercel·GitHub의 실제 설정 화면에서 문서의 절차를 따라 해 보지는 못했다.
+
+### 10단계 저장소 점검 (읽기만 했고, 찾은 것을 고치거나 삭제하지 않았다. 결과는 위치만 적는다)
+- **추적되는 환경변수 파일**: `.env.example` 한 개뿐이다(이름만 있고 값은 없다). `.env`, `.env.local` 등은 추적되지 않는다.
+- **비밀 값 패턴**(JWT 모양 토큰, `sb_secret_`, `sk-`, `ghp_`, 개인 키 블록): 추적되는 파일에서 **발견되지 않았다**.
+- **`service_role`(서비스 롤 키) 영문 이름이 나오는 위치**(이름만 있고 값은 없다): `api/_lib/store.ts`(15, 20행), `HANDOVER.md`, `OVERNIGHT.md`, `CLAUDE.md`. `supabase/add_activity_feed.sql`에는 영문 이름이 없고 한국어 설명("서비스 롤 키")만 있다. `VITE_` 접두어가 붙은 서비스 롤 키는 어디에도 없다.
+- **하드코딩된 비밀번호 대입 패턴**: 추적되는 파일에서 발견되지 않았다.
+- **`.gitignore`가 막는 것**: `.env`(27행), `.env.*`(28행, 단 `.env.example`은 허용), `.superpowers/`(32행), `supabase/migrate_existing_accounts_*.sql`(35행), `supabase/seed_officer.sql`(36행), `reference/`(39행), `.vercel`(41행), `dist`, `node_modules`.
+- **`.gitignore`가 막지 못하는 것**: `steering_demo/`(영상 `steering_demo.mp4` 한 개, 추적되지 않은 상태). `git add .`처럼 넓게 추가하면 실수로 올라갈 수 있다. (`.gitignore`는 고치지 않았다. 사람이 결정한다.)
+- **개인정보 파일의 과거 커밋 여부**: `supabase/seed_officer.sql`과 `supabase/migrate_existing_accounts_*.sql`은 `git log --all`로 확인했을 때 **한 번도 커밋된 적이 없다**(저장소 기록에 없음). 이 파일들은 지금 이 컴퓨터에만 있다(`migrate_existing_accounts_*.sql` 4개는 파일 이름에 부원 아이디가 들어 있다).
+- **공개 저장소의 SQL 개인정보**: 저장소는 GitHub에서 **공개(PUBLIC)** 로 확인됐다. 추적되는 `supabase/` 파일에서 이메일 주소, 전화번호 모양, 8~12자리 숫자 문자열(학번 모양)은 발견되지 않았다. `insert into`/`values`로 시작하는 줄은 함수 본문과 구조 문장(예: `supabase/schema.sql` 161~162행)이고 실제 사람 데이터 행이 아니다. 가입 코드 설정 예시는 `supabase/schema.sql` 454~455행의 주석이며 값은 자리표시자다.
+- **전화번호 모양 문자열**: `src/auth/AuthScreen.tsx` 211행, `src/pages/Profile.tsx` 157행은 입력칸 안내용 예시(placeholder)이고 실제 번호가 아니다.
+- **추적되는 `.claude/launch.json`**: 개발 서버 실행 설정만 있다(문제 없음).
+- **커밋 기록**: 작성자 이메일 한 종류가 공개 기록에 있다(값은 적지 않는다). 공개 저장소이므로 개인 이메일이 부담되면 GitHub의 비공개(noreply) 이메일 설정을 검토한다.
+- **`reference/`**: `.gitignore`로 막혀 있고 추적되지 않는다(원본 LOG:ON 참고 자료).
