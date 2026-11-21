@@ -57,8 +57,8 @@ export const MEMBER_COLORS = [
   { hex: '#78716c', name: '회색' },
 ] as const
 
-/** 동아리 공식 일정의 색 (앱의 보라색 테마) */
-export const CLUB_COLOR = '#8b5cf6'
+/** 동아리 공식 일정의 색(인디고). 위 MEMBER_COLORS 12색과 같은 값이 아니다. 다만 팔레트의 파랑·남색과 색 계열이 가까워서 달력 범례로 구분한다. */
+export const CLUB_COLOR = '#4f46e5'
 
 /** 색을 아직 안 고른 부원에게 보여 줄 자동 색. 같은 사람은 항상 같은 색이 나온다. */
 export function autoColor(userId: string): string {
@@ -67,7 +67,7 @@ export function autoColor(userId: string): string {
   return MEMBER_COLORS[h % MEMBER_COLORS.length].hex
 }
 
-/** 일정에 쓸 색: 공식 일정은 보라색, 개인 일정은 작성자가 고른 색(없으면 자동 색) */
+/** 일정에 쓸 색: 공식 일정은 CLUB_COLOR, 개인 일정은 작성자가 고른 색(없으면 자동 색) */
 export function eventColor(e: Pick<CalendarEvent, 'is_club' | 'created_by' | 'profiles'>): string {
   if (e.is_club) return CLUB_COLOR
   return e.profiles?.color ?? autoColor(e.created_by)

@@ -36,7 +36,7 @@ export const STATUS_LABEL: Record<PostStatus, string> = {
 
 /** 유형별 표시 색(흰 글자가 읽히는 진한 색) */
 export const TYPE_COLOR: Record<PostType, string> = {
-  card_news: '#7c3aed',
+  card_news: '#2454db', // 브랜드 파랑(theme.css 의 --brand-600 과 같은 값)
   reels: '#db2777',
   live: '#0f766e',
 }
