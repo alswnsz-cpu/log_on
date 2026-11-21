@@ -584,6 +584,7 @@ Claude Code가 아니어도 됩니다. **ChatGPT, Codex, Cursor 같은 다른 AI
 계획 설명 받기 → 내가 확인("진행해") → 구현(새 브랜치) → build·lint 통과 → 내가 화면 확인 → 커밋 → PR → 미리보기 확인 → (SQL이 있으면 먼저 실행) → main 병합 → 자동 배포
 
 ### 11-5. 문서 위치
+- `README.md`: 저장소 첫 화면의 짧은 안내(이 문서로 안내함)
 - `CLAUDE.md`: Claude Code가 자동으로 읽는 규칙과 구조(짧음)
 - `AGENTS.md`: `CLAUDE.md`와 똑같은 규칙(Codex 등 다른 도구용, 11-6)
 - `PLAN.md`: 처음 계획과 개편 계획(8번)
