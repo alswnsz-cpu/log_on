@@ -102,7 +102,7 @@
 ```
 
 - 화면은 Supabase에 직접 요청하지만, **무엇을 할 수 있는지는 Supabase의 권한 규칙이 정합니다.**
-- 비밀 키는 두 종류입니다. **공개 키(anon)** 는 화면에 들어가도 되는 키이고, **서비스 롤 키**는 서버 함수만 쓰는 비밀 키이며 절대 화면 코드에 넣지 않습니다.
+- 키는 두 종류입니다. **Publishable key**(옛 이름 anon 키)는 화면에 들어가도 되는 **공개** 키이고, **Secret key**(옛 이름 service_role 키)는 서버 함수만 쓰는 **비밀** 키이며 절대 화면 코드에 넣지 않고 채팅·메신저로도 보내지 않습니다. 코드가 읽는 변수 이름은 옛 이름 그대로입니다(4-3 표).
 - 요금제(무료/유료)와 현재 소유 계정은 소유자가 각 대시보드에서 직접 확인해야 합니다. **[직접 할 일]**
 
 ---
@@ -126,8 +126,8 @@
 ### 3-2. Supabase (데이터·로그인)
 - [ ] **[직접 할 일]** 대시보드의 Organization 설정 → Team(또는 Members)에서 후임 이메일을 **초대**하고 소유자(Owner) 권한을 줍니다.
 - [ ] **[직접 할 일]** 프로젝트를 후임 Organization으로 옮기려면: 프로젝트 → Project Settings → General에서 **Transfer project**(프로젝트 이전)를 사용합니다. 이전 전에 먼저 백업(6번)을 합니다.
-- [ ] **[직접 할 일]** **Auth URL 설정**: Authentication → URL Configuration에서 **Site URL**과 **Redirect URLs**가 실제 사이트 주소(Vercel 배포 주소)와 맞는지 확인하고, 주소가 바뀌었다면 고칩니다. (사이트 주소를 바꾸면 로그인 관련 동작이 어긋날 수 있습니다.)
-- [ ] **[직접 할 일]** 이전이 끝나면 **키를 새로 발급**합니다: Project Settings → API에서 서비스 롤 키(service_role)를 재발급(또는 JWT 시크릿 교체)하고, DB 비밀번호도 재설정합니다. 새 값은 Vercel 환경변수에 갱신합니다(3-3). 키를 바꾸면 이전 키로 접속하던 곳이 모두 끊기니 순서를 지키세요.
+- [ ] **[직접 할 일]** **Auth URL 설정**: Authentication → URL Configuration에서 **Site URL**과 **Redirect URLs**가 실제 사이트 주소(Vercel 배포 주소)와 맞는지 확인하고, 주소가 바뀌었다면 고칩니다. (사이트 주소를 바꾸면 로그인 관련 동작이 어긋날 수 있습니다.) 운영 값은 Site URL `https://log-on-six.vercel.app`, Redirect URLs `https://log-on-six.vercel.app/**` 입니다. 로컬 주소에서 메일 링크가 오는 인증 동작을 시험하려면 Redirect URLs에 `http://localhost:5173/**`를 **추가**해야 합니다(4-5). 부원의 비밀번호 재설정은 임원진이 임시 비밀번호를 정하는 방식(5-5)이라 평소에는 필요 없습니다.
+- [ ] **[직접 할 일]** 이전이 끝나면 **키를 새로 발급**합니다: Project Settings → API에서 Secret key(옛 이름 service_role)를 재발급(또는 JWT 시크릿 교체)하고, DB 비밀번호도 재설정합니다. 새 값은 Vercel 환경변수에 갱신합니다(3-3). 키가 새어 나갔을 때의 대응은 7-3을 보세요. 키를 바꾸면 이전 키로 접속하던 곳이 모두 끊기니 순서를 지키세요.
 - [ ] **[직접 할 일]** 임원진 계정이 앱에서 **2명 이상** 있는지 확인합니다(5번 참고).
 
 ### 3-3. Vercel (사이트 호스팅)
@@ -170,20 +170,20 @@ npm install
 ```
 
 ### 4-3. 환경변수 파일 만들기
-`.env.example`을 복사해서 `.env`라는 이름으로 만들고 값을 채웁니다. **`.env`는 절대 GitHub에 올리지 않습니다**(이미 `.gitignore`로 막혀 있습니다).
+`.env.example`을 복사해서 `.env` 또는 `.env.local`이라는 이름으로 만들고 값을 채웁니다. 둘 다 쓸 수 있고(둘 다 있으면 `.env.local`이 우선합니다), **둘 다 절대 GitHub에 올리지 않습니다**(`.gitignore`가 `.env`, `.env.*`, `*.local`을 막고 있습니다). 내 컴퓨터에서만 쓰는 값(시험용 프로젝트 등)은 `.env.local`에 두는 것을 권장합니다.
 
 ```
-Copy-Item .env.example .env
-notepad .env
+Copy-Item .env.example .env.local
+notepad .env.local
 ```
 
 | 이름 | 어디서 얻나요 |
 |---|---|
 | `VITE_SUPABASE_URL` | Supabase 대시보드 → 프로젝트 → Project Settings → API의 **Project URL** |
-| `VITE_SUPABASE_ANON_KEY` | 같은 화면의 **anon(public) key**. 공개 키입니다. 같은 화면의 service_role 키와 헷갈리지 마세요 |
-| `VITE_ID_EMAIL_DOMAIN` | 지금 운영 중인 값과 **똑같이** 씁니다. Vercel → Settings → Environment Variables에서 확인합니다 **[직접 할 일]** |
+| `VITE_SUPABASE_ANON_KEY` | 같은 화면(API Keys)의 **Publishable key**(옛 화면 이름: anon public key). **공개** 값입니다. 변수 이름은 `ANON_KEY` 그대로 두고 Publishable key 값을 넣습니다. Secret key와 헷갈리지 마세요 |
+| `VITE_ID_EMAIL_DOMAIN` | 운영 중인 프로젝트에 연결한다면 지금 운영 값과 **똑같이** 씁니다(Vercel → Settings → Environment Variables에서 확인 **[직접 할 일]**). **비워 두면 코드가 `club-id.example.com`을 대신 씁니다**(`src/auth/username.ts`). 새 DB라면 4-5에서 정합니다 |
 
-서비스 롤 키는 `.env`에 넣지 않습니다(서버 함수 전용이며 Vercel 환경변수에만 둡니다).
+**Secret key**(옛 이름 service_role)는 `.env`나 `.env.local`에 넣지 않습니다. 서버 함수 전용이며 Vercel 환경변수 `SUPABASE_SERVICE_ROLE_KEY`에만 둡니다. 이 값은 **비밀**이라 채팅·메신저·이메일로 보내지 말고 비밀번호 관리 도구로만 전달합니다. 운영에서 새 Secret key로 서버 함수(활동 찾기)가 동작하는 것을 확인했습니다(2026-11-22).
 
 ### 4-4. 실행과 확인
 ```
@@ -198,6 +198,18 @@ npm run lint
 ```
 - 활동 찾기의 서버 함수(`api/` 폴더)는 `npm run dev`로 실행되지 않습니다. 그 화면은 Vercel 배포(미리보기)에서 확인하거나 Vercel CLI의 `vercel dev`를 씁니다.
 - `build`에서 "번들 크기" 경고가 나오는 것은 알려진 경고이고 오류가 아닙니다(10번 참고).
+
+### 4-5. 처음부터 새로 만들 때(새 Supabase·새 Vercel)
+소유권을 넘기는 것(3번)이 아니라, 빈 상태에서 서비스를 새로 세울 때의 순서입니다. **시험용 프로젝트에서 먼저** 해 보세요. 화면 이름은 서비스가 업데이트되면 달라질 수 있습니다.
+1. **Supabase 새 프로젝트** 만들기(New project). DB 비밀번호는 비밀번호 관리 도구에 보관합니다. **[직접 할 일]**
+2. **SQL 실행**: 8-1의 순서대로 합니다(실행 전 백업은 새 DB라 필요 없습니다).
+3. **인증 설정 — 확인 필요**: 이 서비스는 이메일 칸에 `아이디@내부도메인`을 쓰고 실제 메일을 보내지 않습니다. 그래서 Authentication의 Email 설정에서 **가입 확인 메일(Confirm email)** 을 어떻게 둬야 하는지 정해야 하는데, 이 문서에는 **확인된 값이 없습니다**(코드만으로 알 수 없음). 운영 프로젝트의 현재 설정을 대시보드에서 직접 보고 새 프로젝트도 똑같이 맞춘 뒤, 시험 가입이 되는지 확인합니다. **[직접 할 일]**
+4. **Auth URL**: Authentication → URL Configuration에서 Site URL과 Redirect URLs를 배포 주소로 맞춥니다(운영 값은 3-2). 로컬에서 시험하려면 Redirect URLs에 `http://localhost:5173/**`를 추가합니다.
+5. **키 복사**: Project Settings → API에서 Project URL, Publishable key(→ `VITE_SUPABASE_ANON_KEY`), Secret key(→ `SUPABASE_SERVICE_ROLE_KEY`)를 확인합니다. Secret key는 비밀입니다(4-3).
+6. **`VITE_ID_EMAIL_DOMAIN` 정하기**: 실제 메일 주소가 아니어도 되는 내부용 도메인(예: 동아리 이름에 맞춘 임의 도메인)을 **한 번 정하고 바꾸지 않습니다.** 바꾸면 기존 계정이 로그인되지 않습니다. 비워 두면 기본값 `club-id.example.com`이 쓰이니, 일부러 정하지 않았다면 어떤 값이 쓰이는지 기록해 두세요.
+7. **첫 임원진 지정**: 가입한 뒤 8-1의 "첫 임원진 지정" 문장을 실행합니다.
+8. **Vercel 새 프로젝트**: Vercel에서 Add New → Project → GitHub 저장소를 **Import**합니다. Framework는 **Vite**(자동 인식되는지 확인), Build Command `npm run build`, Output Directory `dist`가 기본값입니다(화면 표기는 확인 필요). 환경변수는 3-3의 이름대로 넣고 **Deploy**합니다. `vercel.json`에 `/api`를 제외한 재작성 규칙이 이미 들어 있습니다.
+9. **배포 확인**: 사이트 접속 → 가입 → 임원진 승인 → 로그인 → 활동 찾기 열기. 서버 함수는 `npm run dev`로 확인되지 않으니 배포 주소에서 확인합니다.
 
 ---
 
