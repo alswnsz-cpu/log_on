@@ -44,8 +44,8 @@ export const RESOURCE_GROUPS: ResourceGroup[] = [
         description: '채용정보에서 ‘물류관리’나 ‘포워딩’을 검색해 주요 업무와 자격 요건을 비교하세요. 직업심리검사도 활용할 수 있습니다.',
       },
       {
-        name: '임금포털 · 임금직무정보시스템',
-        url: 'https://www.wage.go.kr/',
+        name: '임금직업포털(워크피디아)',
+        url: 'https://www.wagework.go.kr/pt/index.do',
         description: '임금정보에서 관심 직종의 경력이나 사업체 규모 조건을 바꿔 보며 임금 수준을 비교하세요.',
       },
       {
