@@ -39,3 +39,6 @@ supabase/seed_officer.sql
 reference/
 
 .vercel
+
+# 개인정보·참고 자료(커밋 금지)
+steering_demo/
