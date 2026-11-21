@@ -1,4 +1,4 @@
-﻿-- LOG:ON Resource Library. Requires schema.sql and existing approval helpers.
+-- LOG:ON Resource Library. Requires schema.sql and existing approval helpers.
 -- 관리자만 실행. 운영 적용 전 백업 및 시험 DB 검증.
 begin;
 create table public.library_resources (
@@ -62,4 +62,3 @@ commit;
 -- drop policy library_storage_delete on storage.objects;
 -- delete from storage.buckets where id='logon-resources';
 -- drop table public.library_bookmarks,public.library_files,public.library_resources;
-

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, type FormEvent } from 'react'
+import { useState, useEffect, useCallback, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { useDialog } from '../components/dialog-context'
@@ -110,4 +110,3 @@ export default function LogisticsInsight() {
     </section>)}
   </>
 }
-

@@ -93,20 +93,20 @@ export default function Notice() {
   const shown = posts.filter(p => (category === '전체' || p.category === category) && (!unreadOnly || !receipt(p, uid)) && `${p.title} ${p.body}`.toLowerCase().includes(query.trim().toLowerCase()))
   return <div className="notice-hub">
     <style>{`
-      .notice-hub button { border: 0; border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 700; background: #7938ed; color: white; cursor: pointer; }
+      .notice-hub button { border: 0; border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 700; background: var(--brand-600); color: white; cursor: pointer; }
       .notice-hub button:disabled { opacity: .55; cursor: not-allowed; }
-      .notice-hub input:not([type=checkbox]), .notice-hub select, .notice-hub textarea { box-sizing: border-box; border: 1px solid #cdb5ff; border-radius: 10px; padding: 12px; font: inherit; background: transparent; color: inherit; min-height: 44px; max-width: 100%; }
-      .notice-hub select option { color: #24143e; background: white; }
-      .notice-hub input[type=checkbox] { accent-color: #7938ed; }
-      .notice-hub button:focus-visible, .notice-hub input:focus-visible, .notice-hub select:focus-visible, .notice-hub textarea:focus-visible { outline: 2px solid #7938ed; outline-offset: 2px; }
+      .notice-hub input:not([type=checkbox]), .notice-hub select, .notice-hub textarea { box-sizing: border-box; border: 1px solid var(--brand-200); border-radius: 10px; padding: 12px; font: inherit; background: transparent; color: inherit; min-height: 44px; max-width: 100%; }
+      .notice-hub select option { color: var(--brand-900); background: white; }
+      .notice-hub input[type=checkbox] { accent-color: var(--brand-600); }
+      .notice-hub button:focus-visible, .notice-hub input:focus-visible, .notice-hub select:focus-visible, .notice-hub textarea:focus-visible { outline: 2px solid var(--brand-600); outline-offset: 2px; }
       .notice-hub .notice-filters { display: grid; grid-template-columns: minmax(0,2fr) minmax(120px,1fr) auto; gap: 12px; align-items: center; }
       .notice-hub .notice-filters label { display: flex; align-items: center; gap: 6px; }
       @media (max-width: 600px) { .notice-hub .notice-filters { grid-template-columns: minmax(0,1fr); } }
     `}</style>
     <section className="card" style={{ marginBottom: 16 }}>
-      <div style={{ ...wrap, justifyContent: 'space-between' }}><div><h1 style={{ margin: 0, color: '#7938ed', fontSize: 20 }}>Notice</h1><p style={{ margin: '10px 0 16px' }}>LOG:ON 공식 공지사항</p></div>{officer && <button disabled={!ready || busy} onClick={() => { reset(); setOpen(true) }}>+ 공지 등록</button>}</div>
+      <div style={{ ...wrap, justifyContent: 'space-between' }}><div><h1 style={{ margin: 0, color: 'var(--brand-600)', fontSize: 20 }}>Notice</h1><p style={{ margin: '10px 0 16px' }}>LOG:ON 공식 공지사항</p></div>{officer && <button disabled={!ready || busy} onClick={() => { reset(); setOpen(true) }}>+ 공지 등록</button>}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10 }}>
-        {[['전체 공지', posts.length], ['미확인 공지', posts.filter(p => !receipt(p, uid)).length], ['중요 공지', posts.filter(p => p.pinned).length]].map(([label, value]) => <div key={label} style={{ padding: 14, border: '1px solid #8b5cf655', background: '#8b5cf614', borderRadius: 12 }}><small>{label}</small><h2 style={{ margin: '6px 0 0', color: '#8b5cf6' }}>{ready ? value : '—'}</h2></div>)}
+        {[['전체 공지', posts.length], ['미확인 공지', posts.filter(p => !receipt(p, uid)).length], ['중요 공지', posts.filter(p => p.pinned).length]].map(([label, value]) => <div key={label} style={{ padding: 14, border: '1px solid var(--brand-200)', background: 'var(--brand-50)', borderRadius: 12 }}><small>{label}</small><h2 style={{ margin: '6px 0 0', color: 'var(--brand-500)' }}>{ready ? value : '—'}</h2></div>)}
       </div><small style={{ display: 'block', marginTop: 10 }}>최근 표시 대상 최대 100건 기준 · 중요 공지 우선</small>
     </section>
     {error && <section className="card" role="alert" style={{ ...wrap, marginBottom: 16, color: '#e05b68' }}>{error} <button disabled={busy} onClick={() => { setError(''); void load() }}>다시 불러오기</button></section>}
@@ -120,7 +120,7 @@ export default function Notice() {
     </form>}
     <section className="card" style={{ marginBottom: 16 }}><div className="notice-filters"><input aria-label="공지 검색" placeholder="제목 및 내용 검색" style={{ width: '100%', minWidth: 0 }} value={query} onChange={e => setQuery(e.target.value)} /><select aria-label="공지 분류" value={category} onChange={e => setCategory(e.target.value)}>{['전체', ...categories].map(c => <option key={c}>{c}</option>)}</select><label><input type="checkbox" checked={unreadOnly} onChange={e => setUnreadOnly(e.target.checked)} /> 미확인만 보기</label></div></section>
     {ready && !shown.length && <section className="card">표시할 공지가 없습니다.</section>}
-    {ready && shown.map(p => { const mine = receipt(p, uid), count = members.filter(m => receipt(p, m.id)).length; return <article className="card" key={p.id} style={{ marginBottom: 12, borderLeft: p.category === '긴급' ? '4px solid #e05b68' : p.pinned ? '4px solid #8b5cf6' : undefined, overflowWrap: 'anywhere' }}>
+    {ready && shown.map(p => { const mine = receipt(p, uid), count = members.filter(m => receipt(p, m.id)).length; return <article className="card" key={p.id} style={{ marginBottom: 12, borderLeft: p.category === '긴급' ? '4px solid #e05b68' : p.pinned ? '4px solid var(--brand-500)' : undefined, overflowWrap: 'anywhere' }}>
       <div style={{ ...wrap, justifyContent: 'space-between' }}><strong style={{ color: p.category === '긴급' ? '#e05b68' : undefined }}>{p.pinned ? '📌 중요 · ' : ''}{p.category}</strong><small>{mine ? '확인 완료' : '미확인'}</small></div>
       <h2>{p.title}</h2><small>{stamp(p.created_at)}{p.revision > 1 ? ' · 내용 수정됨' : ''}</small>
       <p style={{ whiteSpace: 'pre-wrap' }}>{p.body}</p>

@@ -15,6 +15,10 @@ import Agendas from './pages/Agendas'
 import AgendaDetail from './pages/AgendaDetail'
 import Archive from './pages/Archive'
 import AlbumDetail from './pages/AlbumDetail'
+import LogisticsInsight from './pages/LogisticsInsight'
+import ResourceLibrary from './pages/ResourceLibrary'
+import CareerHub from './pages/CareerHub'
+import Notice from './pages/Notice'
 import Portfolio from './pages/Portfolio'
 import PortfolioEditor from './pages/PortfolioEditor'
 import Sites from './pages/explore/Sites'
@@ -106,6 +110,10 @@ function ApprovedApp({ userId }: { userId: string }) {
             <Route path="decisions" element={<Navigate to="/agendas?tab=decided" replace />} />
             <Route path="archive" element={<Archive />} />
             <Route path="archive/:id" element={<AlbumDetail />} />
+            <Route path="logistics-insight" element={<LogisticsInsight />} />
+            <Route path="resource-library" element={<ResourceLibrary />} />
+            <Route path="career-hub" element={<CareerHub />} />
+            <Route path="notices" element={<Notice />} />
             <Route path="portfolio" element={<Portfolio />} />
             <Route path="portfolio/:docId" element={<PortfolioEditor />} />
             <Route path="explore" element={<Navigate to="/explore/sites" replace />} />
