@@ -215,7 +215,7 @@ export default function Common() {
                         className={inPick ? 'cell heat-cell picked' : 'cell heat-cell'}
                         style={{
                           background: `rgba(124, 58, 237, ${(n / total) * 0.85})`,
-                          color: n / total > 0.5 ? '#fff' : 'var(--purple-900)',
+                          color: n / total > 0.5 ? '#fff' : 'var(--brand-900)',
                         }}
                         title={`${d} ${minToHHMM(start)} · ${n}/${total}명 가능`}
                       >

@@ -1,16 +1,27 @@
 /* ===== 색·모양 변수: 디자인(색)을 바꿀 때는 이 블록만 고친다 ===== */
 :root {
-  /* 브랜드 색(파랑). 이름은 이어서 --brand-* 로 바뀐다 */
-  --purple-50: #f4f7fc;
-  --purple-100: #e4ecfb;
-  --purple-200: #c5d5f3;
-  --purple-400: #6f8fe8;
-  --purple-500: #3b66e6;
-  --purple-600: #2454db;
-  --purple-700: #1d43b7;
-  --purple-900: #132541;
+  /* 브랜드 색(파랑) */
+  --brand-50: #f4f7fc;
+  --brand-100: #e4ecfb;
+  --brand-200: #c5d5f3;
+  --brand-400: #6f8fe8;
+  --brand-500: #3b66e6;
+  --brand-600: #2454db;
+  --brand-700: #1d43b7;
+  --brand-900: #132541;
 
-  --bg: var(--purple-50);
+  /* 옛 이름(--purple-*)은 새 이름을 가리키는 별칭이다. 다른 코드가 옛 이름을 써도 깨지지 않게 남겨 둔다.
+     새 코드는 --brand-* 를 쓴다. */
+  --purple-50: var(--brand-50);
+  --purple-100: var(--brand-100);
+  --purple-200: var(--brand-200);
+  --purple-400: var(--brand-400);
+  --purple-500: var(--brand-500);
+  --purple-600: var(--brand-600);
+  --purple-700: var(--brand-700);
+  --purple-900: var(--brand-900);
+
+  --bg: var(--brand-50);
   --card-bg: #ffffff;
   --text: #17253b;
   --text-muted: #52627a;
@@ -91,7 +102,7 @@ a {
 
 /* 레이아웃 */
 .app-header {
-  background: linear-gradient(135deg, var(--purple-600), var(--purple-500));
+  background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
   color: #fff;
   padding: 20px 16px 16px;
 }
@@ -123,13 +134,13 @@ a {
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 0.9rem;
-  color: var(--purple-700);
-  background: var(--purple-100);
+  color: var(--brand-700);
+  background: var(--brand-100);
   white-space: nowrap;
 }
 
 .area-nav a.active {
-  background: var(--purple-600);
+  background: var(--brand-600);
   color: #fff;
 }
 
@@ -166,7 +177,7 @@ a {
 .card h2 {
   margin: 0 0 8px;
   font-size: 1.05rem;
-  color: var(--purple-700);
+  color: var(--brand-700);
 }
 
 .card p {
@@ -183,21 +194,21 @@ a {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  background: var(--purple-600);
+  background: var(--brand-600);
   color: #fff;
 }
 
 .btn:hover {
-  background: var(--purple-700);
+  background: var(--brand-700);
 }
 
 .btn-ghost {
-  background: var(--purple-100);
-  color: var(--purple-700);
+  background: var(--brand-100);
+  color: var(--brand-700);
 }
 
 .btn-ghost:hover {
-  background: var(--purple-200);
+  background: var(--brand-200);
 }
 
 /* 상태 배지 */
@@ -207,8 +218,8 @@ a {
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: var(--purple-100);
-  color: var(--purple-700);
+  background: var(--brand-100);
+  color: var(--brand-700);
 }
 
 .badge.ok {
@@ -265,12 +276,12 @@ a.btn {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  background: var(--purple-100);
-  color: var(--purple-700);
+  background: var(--brand-100);
+  color: var(--brand-700);
 }
 
 .tab.active {
-  background: var(--purple-600);
+  background: var(--brand-600);
   color: #fff;
 }
 
@@ -284,21 +295,21 @@ a.btn {
   gap: 6px;
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--purple-900);
+  color: var(--brand-900);
 }
 
 .form input {
   font: inherit;
   padding: 10px 12px;
-  border: 1px solid var(--purple-200);
+  border: 1px solid var(--brand-200);
   border-radius: 10px;
   background: #fff;
   color: var(--text);
 }
 
 .form input:focus {
-  outline: 2px solid var(--purple-400);
-  border-color: var(--purple-400);
+  outline: 2px solid var(--brand-400);
+  border-color: var(--brand-400);
 }
 
 .hint {
@@ -392,7 +403,7 @@ a.btn {
 .form select {
   font: inherit;
   padding: 10px 12px;
-  border: 1px solid var(--purple-200);
+  border: 1px solid var(--brand-200);
   border-radius: 10px;
   background: #fff;
   color: var(--text);
@@ -431,7 +442,7 @@ a.btn {
 
 .cal-weekdays .sat,
 .cal-cell.sat .cal-day {
-  color: var(--purple-600);
+  color: var(--brand-600);
 }
 
 .cal-cell {
@@ -457,12 +468,12 @@ a.btn {
 }
 
 .cal-cell.today {
-  border-color: var(--purple-500);
+  border-color: var(--brand-500);
 }
 
 .cal-cell.sel {
-  background: var(--purple-100);
-  border-color: var(--purple-600);
+  background: var(--brand-100);
+  border-color: var(--brand-600);
 }
 
 .cal-day {
@@ -476,7 +487,7 @@ a.btn {
   min-width: 22px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--purple-600);
+  background: var(--brand-600);
   color: #fff;
   text-align: center;
 }
@@ -485,7 +496,7 @@ a.btn {
   display: block;
   padding: 1px 4px;
   border-radius: 4px;
-  background: var(--purple-500);
+  background: var(--brand-500);
   color: #fff;
   font-size: 0.65rem;
   line-height: 1.3;
@@ -530,13 +541,13 @@ a.btn {
 }
 
 .list li.pick-on {
-  border-color: var(--purple-600);
-  background: var(--purple-50);
-  box-shadow: 0 0 0 1px var(--purple-600);
+  border-color: var(--brand-600);
+  background: var(--brand-50);
+  box-shadow: 0 0 0 1px var(--brand-600);
 }
 
 .heat-cell.picked {
-  outline: 3px solid var(--purple-900);
+  outline: 3px solid var(--brand-900);
   outline-offset: -3px;
 }
 
@@ -572,7 +583,7 @@ a.btn {
 .sortable-item.dragging {
   z-index: 5;
   transition: none;
-  border-color: var(--purple-500);
+  border-color: var(--brand-500);
   box-shadow: 0 10px 28px rgba(124, 58, 237, 0.35);
   cursor: grabbing;
 }
@@ -596,7 +607,7 @@ a.btn {
 
 .drag-handle:hover,
 .drag-handle:focus-visible {
-  color: var(--purple-700);
+  color: var(--brand-700);
 }
 
 .drag-handle:disabled {
@@ -617,12 +628,12 @@ a.btn {
   padding: 0;
   border: 3px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px var(--purple-200);
+  box-shadow: 0 0 0 1px var(--brand-200);
   cursor: pointer;
 }
 
 .color-swatch.on {
-  box-shadow: 0 0 0 3px var(--purple-900);
+  box-shadow: 0 0 0 3px var(--brand-900);
 }
 
 .color-swatch:disabled {
@@ -684,7 +695,7 @@ a.btn {
   margin: 2px 0 0;
   padding: 0;
   border: 0;
-  accent-color: var(--purple-600);
+  accent-color: var(--brand-600);
 }
 
 .cal-memo {
@@ -735,7 +746,7 @@ a.btn {
   z-index: 20;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   background: #fff;
-  border-top: 2px solid var(--purple-500);
+  border-top: 2px solid var(--brand-500);
   box-shadow: 0 -6px 18px rgba(124, 58, 237, 0.18);
 }
 
@@ -753,7 +764,7 @@ a.btn {
   display: grid;
   gap: 2px;
   font-size: 0.95rem;
-  color: var(--purple-900);
+  color: var(--brand-900);
 }
 
 .complete-bar-text span {
@@ -795,14 +806,14 @@ a.btn {
 
 .application summary {
   cursor: pointer;
-  color: var(--purple-700);
+  color: var(--brand-700);
   font-weight: 600;
 }
 
 .application dl {
   margin: 8px 0 0;
   padding: 10px 12px;
-  background: var(--purple-50);
+  background: var(--brand-50);
   border-radius: 10px;
 }
 
@@ -831,7 +842,7 @@ a.btn {
   padding-top: 14px;
   border-top: 1px solid var(--border);
   font-weight: 700;
-  color: var(--purple-900);
+  color: var(--brand-900);
 }
 
 .form-group {
@@ -842,7 +853,7 @@ a.btn {
 .form-group-title {
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--purple-900);
+  color: var(--brand-900);
 }
 
 .chip {
@@ -852,12 +863,12 @@ a.btn {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  background: var(--purple-100);
-  color: var(--purple-700);
+  background: var(--brand-100);
+  color: var(--brand-700);
 }
 
 .chip.on {
-  background: var(--purple-600);
+  background: var(--brand-600);
   color: #fff;
 }
 
@@ -868,8 +879,8 @@ a.btn {
 }
 
 .msg.notice {
-  background: var(--purple-50);
-  color: var(--purple-700);
+  background: var(--brand-50);
+  color: var(--brand-700);
 }
 
 .grid-wrap {
@@ -908,7 +919,7 @@ a.btn {
 }
 
 .time-grid tr.hour .cell {
-  border-top-color: var(--purple-200);
+  border-top-color: var(--brand-200);
 }
 
 .cell.empty {
@@ -917,11 +928,11 @@ a.btn {
 }
 
 .cell.empty:hover {
-  background: var(--purple-50);
+  background: var(--brand-50);
 }
 
 .cell.class {
-  background: var(--purple-500);
+  background: var(--brand-500);
   color: #fff;
   font-weight: 600;
 }
@@ -952,7 +963,7 @@ a.btn {
 }
 
 .swatch.class {
-  background: var(--purple-500);
+  background: var(--brand-500);
 }
 
 .swatch.manual {
@@ -963,7 +974,7 @@ a.btn {
 textarea {
   font: inherit;
   padding: 10px 12px;
-  border: 1px solid var(--purple-200);
+  border: 1px solid var(--brand-200);
   border-radius: 10px;
   background: #fff;
   color: var(--text);
@@ -972,8 +983,8 @@ textarea {
 }
 
 textarea:focus {
-  outline: 2px solid var(--purple-400);
-  border-color: var(--purple-400);
+  outline: 2px solid var(--brand-400);
+  border-color: var(--brand-400);
 }
 
 .section-head {
@@ -988,7 +999,7 @@ textarea:focus {
 }
 
 .agenda-card:hover {
-  border-color: var(--purple-400);
+  border-color: var(--brand-400);
 }
 
 .stance-bar {
@@ -996,7 +1007,7 @@ textarea:focus {
   height: 10px;
   border-radius: 999px;
   overflow: hidden;
-  background: var(--purple-100);
+  background: var(--brand-100);
   margin: 6px 0 4px;
 }
 
@@ -1021,7 +1032,7 @@ textarea:focus {
 }
 
 .decision-card {
-  border-color: var(--purple-400);
+  border-color: var(--brand-400);
 }
 
 /* 브랜드 */
@@ -1231,7 +1242,7 @@ textarea:focus {
 .dialog h2 {
   margin: 0 0 8px;
   font-size: 1.1rem;
-  color: var(--purple-700);
+  color: var(--brand-700);
 }
 
 .dialog-message {
@@ -1247,14 +1258,14 @@ textarea:focus {
   margin-bottom: 16px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--purple-900);
+  color: var(--brand-900);
 }
 
 .dialog-field input,
 .dialog-text {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--purple-200);
+  border: 1px solid var(--brand-200);
   border-radius: 10px;
   background: #fff;
   color: var(--text);
@@ -1298,7 +1309,7 @@ textarea:focus {
 /* "← 처음으로" 칩은 메뉴 항목과 구분되게 테두리만 둔다 */
 .area-nav a.area-nav-home {
   background: transparent;
-  border: 1px solid var(--purple-200);
+  border: 1px solid var(--brand-200);
 }
 
 /* 영역 이름은 사이드바에서만 보인다 */
@@ -1309,7 +1320,7 @@ textarea:focus {
 .hub h2 {
   margin: 0 0 12px;
   font-size: 1.25rem;
-  color: var(--purple-900);
+  color: var(--brand-900);
 }
 
 .hub-grid {
@@ -1334,7 +1345,7 @@ textarea:focus {
 
 .hub-card strong {
   font-size: 1.05rem;
-  color: var(--purple-700);
+  color: var(--brand-700);
 }
 
 .hub-card span:not(.badge) {
@@ -1343,11 +1354,11 @@ textarea:focus {
 }
 
 a.hub-card:hover {
-  border-color: var(--purple-400);
+  border-color: var(--brand-400);
 }
 
 a.hub-card:focus-visible {
-  outline: 3px solid var(--purple-500);
+  outline: 3px solid var(--brand-500);
   outline-offset: 2px;
 }
 
@@ -1368,7 +1379,7 @@ a.hub-card:focus-visible {
 .progress {
   height: 10px;
   margin: 8px 0 4px;
-  background: var(--purple-100);
+  background: var(--brand-100);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1376,14 +1387,14 @@ a.hub-card:focus-visible {
 .progress > i {
   display: block;
   height: 100%;
-  background: var(--purple-600);
+  background: var(--brand-600);
   border-radius: 999px;
 }
 
 .project-sub {
   margin: 12px 0 4px;
   font-size: 0.95rem;
-  color: var(--purple-700);
+  color: var(--brand-700);
 }
 
 /* 콘텐츠 플래너: 게시물 목록과 상태 표시 */
@@ -1398,7 +1409,7 @@ a.hub-card:focus-visible {
   gap: 6px;
   min-width: 0;
   padding: 12px;
-  background: var(--purple-50);
+  background: var(--brand-50);
   border: 1px solid var(--border);
   border-radius: 12px;
 }
@@ -1407,7 +1418,7 @@ a.hub-card:focus-visible {
   margin: 0;
   min-width: 0;
   font-size: 1rem;
-  color: var(--purple-900);
+  color: var(--brand-900);
   overflow-wrap: anywhere;
 }
 
@@ -1421,7 +1432,7 @@ a.hub-card:focus-visible {
 .post-progress select {
   font: inherit;
   padding: 6px 10px;
-  border: 1px solid var(--purple-200);
+  border: 1px solid var(--brand-200);
   border-radius: 10px;
   background: #fff;
   color: var(--text);
@@ -1440,7 +1451,7 @@ a.hub-card:focus-visible {
 .feed-title {
   min-width: 0;
   font-weight: 700;
-  color: var(--purple-700);
+  color: var(--brand-700);
   overflow-wrap: anywhere;
 }
 
@@ -1461,14 +1472,14 @@ a.feed-title:hover {
   flex-direction: column;
   gap: 6px;
   padding: 16px;
-  background: var(--purple-50);
+  background: var(--brand-50);
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
 }
 
 .resource-card strong {
-  color: var(--purple-700);
+  color: var(--brand-700);
 }
 
 .resource-card span {
@@ -1477,11 +1488,11 @@ a.feed-title:hover {
 }
 
 .resource-card:hover {
-  border-color: var(--purple-400);
+  border-color: var(--brand-400);
 }
 
 .resource-card:focus-visible {
-  outline: 3px solid var(--purple-500);
+  outline: 3px solid var(--brand-500);
   outline-offset: 2px;
 }
 
@@ -1524,11 +1535,11 @@ a.feed-title:hover {
 }
 
 .week-day.today {
-  border-color: var(--purple-500);
+  border-color: var(--brand-500);
 }
 
 .week-day.sel {
-  box-shadow: 0 0 0 2px var(--purple-600);
+  box-shadow: 0 0 0 2px var(--brand-600);
 }
 
 .week-day-head {
@@ -1544,7 +1555,7 @@ a.feed-title:hover {
   padding: 4px 2px;
   font: inherit;
   font-weight: 700;
-  color: var(--purple-900);
+  color: var(--brand-900);
   cursor: pointer;
 }
 
@@ -1669,7 +1680,7 @@ a.feed-title:hover {
     margin: 0 0 6px;
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--purple-900);
+    color: var(--brand-900);
   }
 
   .area-nav a {
@@ -1684,7 +1695,7 @@ a.feed-title:hover {
   margin: 16px 0 6px;
   padding-bottom: 4px;
   font-size: 1.05rem;
-  color: var(--purple-700);
+  color: var(--brand-700);
   border-bottom: 1px solid var(--border);
 }
 
