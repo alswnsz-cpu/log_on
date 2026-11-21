@@ -214,8 +214,9 @@ export default function Common() {
                         key={d}
                         className={inPick ? 'cell heat-cell picked' : 'cell heat-cell'}
                         style={{
-                          background: `rgba(124, 58, 237, ${(n / total) * 0.85})`,
-                          color: n / total > 0.5 ? '#fff' : 'var(--brand-900)',
+                          background: `rgba(36, 84, 219, ${n / total})`, // 브랜드 파랑(--brand-600)
+                          // 칸이 진해지면 글자를 흰색으로. 파랑은 보라보다 밝아서 0.5가 아니라 0.8부터 바꾼다
+                          color: n / total > 0.8 ? '#fff' : 'var(--brand-900)',
                         }}
                         title={`${d} ${minToHHMM(start)} · ${n}/${total}명 가능`}
                       >

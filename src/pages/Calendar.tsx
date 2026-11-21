@@ -581,7 +581,7 @@ export default function Calendar() {
                   <span>
                     동아리 공식 일정
                     <span className="hint" style={{ display: 'block', fontWeight: 400 }}>
-                      체크하면 모든 부원에게 공식 일정(보라색)으로 보여요. 체크하지 않으면 내 개인 일정이에요.
+                      체크하면 모든 부원에게 공식 일정으로 보여요. 체크하지 않으면 내 개인 일정이에요.
                     </span>
                   </span>
                 </label>
