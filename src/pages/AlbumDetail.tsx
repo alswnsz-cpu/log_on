@@ -301,15 +301,15 @@ export default function AlbumDetail() {
             </select></label>
             <label>설명<textarea value={description} maxLength={1000} rows={4} onChange={e => setDescription(e.target.value)} /></label>
             {editError && <p className="msg error">{editError}</p>}
-            <div className="actions"><button className="btn" disabled={locked}>저장</button><button type="button" className="btn btn-light" disabled={saving} onClick={() => setEditing(false)}>취소</button></div>
+            <div className="actions"><button className="btn" disabled={locked}>저장</button><button type="button" className="btn btn-ghost" disabled={saving} onClick={() => setEditing(false)}>취소</button></div>
           </form>
         )}
-        <Link to="/archive" className="btn btn-light btn-sm">← 앨범 목록</Link>
+        <Link to="/archive" className="btn btn-ghost btn-sm">← 앨범 목록</Link>
         {isOfficer && (
           <>
             {albumDeleteError && <p className="msg error" role="alert">{albumDeleteError}</p>}
             <div className="actions">
-              <button type="button" className="btn btn-light btn-sm" disabled={locked} onClick={() => { setTitle(album.title); setDescription(album.description || ''); setCategory(album.category); setEditError(''); setEditing(true) }}>앨범 수정</button>
+              <button type="button" className="btn btn-ghost btn-sm" disabled={locked} onClick={() => { setTitle(album.title); setDescription(album.description || ''); setCategory(album.category); setEditError(''); setEditing(true) }}>앨범 수정</button>
               <button
                 type="button"
                 className="btn btn-sm btn-ghost btn-danger"
@@ -368,12 +368,12 @@ export default function AlbumDetail() {
                 )}
                 {album.cover_path === p.storage_path && <span className="badge">대표 사진</span>}
                 {p.caption && <figcaption className="hint">{p.caption}</figcaption>}
-                <button type="button" className="btn btn-light btn-sm" onClick={() => void downloadPhoto(p)}>다운로드</button>
-                {isOfficer && captionId === p.id && <div className="form"><textarea aria-label="사진 설명" maxLength={500} value={captionText} onChange={e => setCaptionText(e.target.value)} /><div className="actions"><button type="button" className="btn btn-sm" disabled={locked} onClick={() => void saveCaption(p)}>저장</button><button type="button" className="btn btn-light btn-sm" onClick={() => setCaptionId(null)}>취소</button></div></div>}
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => void downloadPhoto(p)}>다운로드</button>
+                {isOfficer && captionId === p.id && <div className="form"><textarea aria-label="사진 설명" maxLength={500} value={captionText} onChange={e => setCaptionText(e.target.value)} /><div className="actions"><button type="button" className="btn btn-sm" disabled={locked} onClick={() => void saveCaption(p)}>저장</button><button type="button" className="btn btn-ghost btn-sm" onClick={() => setCaptionId(null)}>취소</button></div></div>}
                 {isOfficer && (
                   <div className="actions">
-                    <button type="button" className="btn btn-light btn-sm" disabled={locked} onClick={() => { setCaptionId(p.id); setCaptionText(p.caption || '') }}>설명 수정</button>
-                    <button type="button" className="btn btn-light btn-sm" disabled={locked || album.cover_path === p.storage_path} onClick={() => void saveCover(p)}>대표 사진 지정</button>
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={locked} onClick={() => { setCaptionId(p.id); setCaptionText(p.caption || '') }}>설명 수정</button>
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={locked || album.cover_path === p.storage_path} onClick={() => void saveCover(p)}>대표 사진 지정</button>
                     <button
                       type="button"
                       className="btn btn-sm btn-ghost btn-danger"
@@ -386,9 +386,10 @@ export default function AlbumDetail() {
                 )}
               </figure>
             ))}
-          </div>
+                   </div>
         )}
-            </section>
+      </section>
+
 
       {zoom && <div role="dialog" aria-modal="true" aria-label="사진 확대" onClick={() => setZoom(null)} onKeyDown={e => { if (e.key === 'Escape') setZoom(null) }} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 12 }}>
         <button type="button" autoFocus className="btn" onClick={() => setZoom(null)}>닫기 ✕</button>

@@ -95,7 +95,7 @@ export default function ResourceLibrary() {
         <label>외부 참고 링크<input type="url" maxLength={2048} value={form.source_url} onChange={e=>setForm({...form,source_url:e.target.value})}/></label>
         <label>첨부파일 (최대 3개, 개당 20MB)<input key={fileKey} type="file" multiple accept={ACCEPT} onChange={e=>{const picked=Array.from(e.target.files??[]);const err=validateFiles(picked,items.find(x=>x.id===editing)?.files.length??0);setNotice(err??'');setFiles(err?[]:picked);if(err)setFileKey(k=>k+1)}}/></label>
         {files.map((f,i)=><p className="hint" key={i}>{f.name}</p>)}
-        <label><input type="checkbox" required checked={form.rights_confirmed} onChange={e=>setForm({...form,rights_confirmed:e.target.checked})}/> 공유 권한이 있는 자료임을 확인합니다.</label>
+        <label className="check-row"><input type="checkbox" required checked={form.rights_confirmed} onChange={e=>setForm({...form,rights_confirmed:e.target.checked})}/> 공유 권한이 있는 자료임을 확인합니다.</label>
         <button className="btn" disabled={busy||!ready}>{busy?'처리 중…':editing?'수정 저장':'자료 등록'}</button>
       </form>}
       <div className="form"><label>검색<input placeholder="자료명, 키워드, 작성자" value={query} onChange={e=>setQuery(e.target.value)}/></label></div>

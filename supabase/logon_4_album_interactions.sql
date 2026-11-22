@@ -108,3 +108,6 @@ using (
 );
 
 commit;
+
+-- [R] 되돌리기 (앨범 댓글과 좋아요 데이터가 삭제됩니다)
+-- drop table public.album_comments, public.album_likes;

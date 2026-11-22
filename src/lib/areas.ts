@@ -29,8 +29,8 @@ export const AREAS: Area[] = [
     description: '달력과 시간표, 공통 시간을 확인해요.',
     paths: ['/calendar', '/schedule', '/common', '/members', '/meetings', '/content', '/tasks', '/notices'],
     items: [
-      { label: '공지사항', to: '/notices' },
       { label: '달력', to: '/calendar' },
+      { label: '공지사항', to: '/notices' },
       { label: '내 시간표', to: '/schedule', hideForAlumni: true },
       { label: '공통 시간', to: '/common', hideForAlumni: true },
       { label: '멤버별', to: '/members' },

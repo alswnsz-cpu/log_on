@@ -409,11 +409,16 @@ npm run lint
 | 26 | `add_notes.sql` **[검증 전]** | 개별 노트 |
 | 27 | `add_portfolio_documents.sql` **[검증 전]** | 직무별 포트폴리오 |
 | 28 | `add_activity_feed.sql` **[검증 전]** | 활동 찾기 저장본·즐겨찾기 |
-| 29 | `remove_signup_code.sql` | 가입 코드 검사 제거(**마지막**) |
+| 29 | `logon_4_album_interactions.sql` **[검증 전]** | 앨범 좋아요·댓글 |
+| 30 | `add_logistics_insight.sql` **[검증 전]** | 물류 인사이트 |
+| 31 | `add_resource_library.sql` **[검증 전]** | 자료실·파일 공유 |
+| 32 | `add_career_hub.sql` **[검증 전]** | 커리어 허브 |
+| 33 | `add_notices.sql` **[검증 전]** | 공지사항·확인 기록 |
+| 34 | `remove_signup_code.sql` | 가입 코드 검사 제거(**마지막**) |
 
 - **새 DB에서는 실행하지 않는 파일**: `fix_signup_trigger.sql`, `fix_username_login.sql`, `fix_reopen_agenda.sql`(예전 DB 수정용, 지금 `schema.sql`에 이미 포함), `add_logon_tables.sql`(쪼개기 전 원본), `copy_*.sql`(옛 데이터 복사용), `migrate_existing_accounts_*.sql`과 `seed_officer.sql`(개인정보가 있어 저장소에 없음).
-- **29번이 마지막인 이유**: 옛 파일(특히 3번)을 다시 실행하면 가입 코드 검사가 되살아나 새 가입이 막힙니다. 옛 파일을 다시 실행했다면 29번을 마지막에 다시 실행하세요.
-- **이미 운영 중인 DB**는 1~20번과 29번이 실행된 상태입니다. 개편 기능을 쓰려면 21~28번(과 선택 파일 `copy_activities_to_records.sql`, `copy_portfolios_to_documents.sql`)만 순서대로 실행합니다.
+- **34번이 마지막인 이유**: 옛 파일(특히 3번)을 다시 실행하면 가입 코드 검사가 되살아나 새 가입이 막힙니다. 옛 파일을 다시 실행했다면 34번을 마지막에 다시 실행하세요.
+- **이미 운영 중인 DB**는 기존 SQL 적용 이력을 확인합니다. 개편 기능은 21~28번(과 선택 파일 `copy_activities_to_records.sql`, `copy_portfolios_to_documents.sql`), 신규 통합 기능은 29~33번을 순서대로 실행합니다. 이미 실행한 파일은 다시 실행하지 않습니다. 가입 코드 검사 제거 파일은 34번입니다.
 - **첫 임원진 지정**(새 DB 또는 임원진이 없을 때): 임원진이 될 사람이 앱에서 먼저 가입한 뒤 SQL Editor에서 실행합니다. 아이디로 가입한 계정의 이메일은 `아이디@(VITE_ID_EMAIL_DOMAIN 값)` 형태입니다. 아래 `아이디1@내부도메인`, `아이디2@내부도메인`을 실제 값으로 바꿔 쓰세요. **[직접 할 일]**
 
 ```sql

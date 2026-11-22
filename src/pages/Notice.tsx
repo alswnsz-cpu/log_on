@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { useDialog } from '../components/dialog-context'
+import { useLayoutContext } from '../components/layout-context'
 
 const categories = ['일반', '활동', '일정', '모집', '긴급']
 const empty = { title: '', body: '', category: '일반', pinned: false }
@@ -13,6 +14,7 @@ const stamp = (value: string) => new Date(value).toLocaleString('ko-KR', { timeZ
 const wrap = { display: 'flex', flexWrap: 'wrap' as const, gap: 8, alignItems: 'center' }
 export default function Notice() {
   const { profile } = useAuth()
+  const { alumni } = useLayoutContext()
   const uid = profile?.id, approved = profile?.status === 'approved', officer = profile?.role === 'officer'
   const dialog = useDialog()
   const [posts, setPosts] = useState<NoticeRow[]>([])
@@ -47,7 +49,26 @@ export default function Notice() {
           if ((m.data ?? []).length < 500) break
         }
       }
-      setPosts(rows); setReads(allReads); setMembers(allMembers); setReady(true)
+           const alumniIds = new Set<string>()
+           if (officer) {
+        for (let offset = 0; ; offset += 500) {
+          const a = await supabase
+            .from('member_alumni')
+            .select('user_id')
+            .order('user_id')
+            .range(offset, offset + 499)
+          if (a.error) throw a.error
+          for (const row of a.data ?? []) {
+            alumniIds.add(row.user_id)
+          }
+          if ((a.data ?? []).length < 500) break
+        }
+      }
+
+      setPosts(rows)
+      setReads(allReads)
+      setMembers(allMembers.filter(m => !alumniIds.has(m.id)))
+      setReady(true)
     } catch { setReady(false); setError('공지사항을 불러오지 못했습니다. SQL 적용 및 권한을 확인해 주세요.') }
   }, [uid, approved, officer])
   useEffect(() => {
@@ -92,24 +113,13 @@ export default function Notice() {
   if (!uid || !approved) return <section className="card">승인된 회원만 이용할 수 있습니다.</section>
   const shown = posts.filter(p => (category === '전체' || p.category === category) && (!unreadOnly || !receipt(p, uid)) && `${p.title} ${p.body}`.toLowerCase().includes(query.trim().toLowerCase()))
   return <div className="notice-hub">
-    <style>{`
-      .notice-hub button { border: 0; border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 700; background: var(--brand-600); color: white; cursor: pointer; }
-      .notice-hub button:disabled { opacity: .55; cursor: not-allowed; }
-      .notice-hub input:not([type=checkbox]), .notice-hub select, .notice-hub textarea { box-sizing: border-box; border: 1px solid var(--brand-200); border-radius: 10px; padding: 12px; font: inherit; background: transparent; color: inherit; min-height: 44px; max-width: 100%; }
-      .notice-hub select option { color: var(--brand-900); background: white; }
-      .notice-hub input[type=checkbox] { accent-color: var(--brand-600); }
-      .notice-hub button:focus-visible, .notice-hub input:focus-visible, .notice-hub select:focus-visible, .notice-hub textarea:focus-visible { outline: 2px solid var(--brand-600); outline-offset: 2px; }
-      .notice-hub .notice-filters { display: grid; grid-template-columns: minmax(0,2fr) minmax(120px,1fr) auto; gap: 12px; align-items: center; }
-      .notice-hub .notice-filters label { display: flex; align-items: center; gap: 6px; }
-      @media (max-width: 600px) { .notice-hub .notice-filters { grid-template-columns: minmax(0,1fr); } }
-    `}</style>
     <section className="card" style={{ marginBottom: 16 }}>
       <div style={{ ...wrap, justifyContent: 'space-between' }}><div><h1 style={{ margin: 0, color: 'var(--brand-600)', fontSize: 20 }}>Notice</h1><p style={{ margin: '10px 0 16px' }}>LOG:ON 공식 공지사항</p></div>{officer && <button disabled={!ready || busy} onClick={() => { reset(); setOpen(true) }}>+ 공지 등록</button>}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10 }}>
-        {[['전체 공지', posts.length], ['미확인 공지', posts.filter(p => !receipt(p, uid)).length], ['중요 공지', posts.filter(p => p.pinned).length]].map(([label, value]) => <div key={label} style={{ padding: 14, border: '1px solid var(--brand-200)', background: 'var(--brand-50)', borderRadius: 12 }}><small>{label}</small><h2 style={{ margin: '6px 0 0', color: 'var(--brand-500)' }}>{ready ? value : '—'}</h2></div>)}
+        {[['전체 공지', posts.length], ...(alumni ? [] : [['미확인 공지', posts.filter(p => !receipt(p, uid)).length]]), ['중요 공지', posts.filter(p => p.pinned).length]].map(([label, value]) => <div key={label} style={{ padding: 14, border: '1px solid var(--brand-200)', background: 'var(--brand-50)', borderRadius: 12 }}><small>{label}</small><h2 style={{ margin: '6px 0 0', color: 'var(--brand-500)' }}>{ready ? value : '—'}</h2></div>)}
       </div><small style={{ display: 'block', marginTop: 10 }}>최근 표시 대상 최대 100건 기준 · 중요 공지 우선</small>
     </section>
-    {error && <section className="card" role="alert" style={{ ...wrap, marginBottom: 16, color: '#e05b68' }}>{error} <button disabled={busy} onClick={() => { setError(''); void load() }}>다시 불러오기</button></section>}
+    {error && <section className="card" role="alert" style={{ ...wrap, marginBottom: 16, color: 'var(--danger)' }}>{error} <button disabled={busy} onClick={() => { setError(''); void load() }}>다시 불러오기</button></section>}
     {open && officer && <form className="card" onSubmit={save} style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
       <h2>{editing ? '공지 수정' : '공지 등록'}</h2>
       <label>제목<input style={{ width: '100%' }} required maxLength={200} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
@@ -120,8 +130,8 @@ export default function Notice() {
     </form>}
     <section className="card" style={{ marginBottom: 16 }}><div className="notice-filters"><input aria-label="공지 검색" placeholder="제목 및 내용 검색" style={{ width: '100%', minWidth: 0 }} value={query} onChange={e => setQuery(e.target.value)} /><select aria-label="공지 분류" value={category} onChange={e => setCategory(e.target.value)}>{['전체', ...categories].map(c => <option key={c}>{c}</option>)}</select><label><input type="checkbox" checked={unreadOnly} onChange={e => setUnreadOnly(e.target.checked)} /> 미확인만 보기</label></div></section>
     {ready && !shown.length && <section className="card">표시할 공지가 없습니다.</section>}
-    {ready && shown.map(p => { const mine = receipt(p, uid), count = members.filter(m => receipt(p, m.id)).length; return <article className="card" key={p.id} style={{ marginBottom: 12, borderLeft: p.category === '긴급' ? '4px solid #e05b68' : p.pinned ? '4px solid var(--brand-500)' : undefined, overflowWrap: 'anywhere' }}>
-      <div style={{ ...wrap, justifyContent: 'space-between' }}><strong style={{ color: p.category === '긴급' ? '#e05b68' : undefined }}>{p.pinned ? '📌 중요 · ' : ''}{p.category}</strong><small>{mine ? '확인 완료' : '미확인'}</small></div>
+    {ready && shown.map(p => { const mine = receipt(p, uid), count = members.filter(m => receipt(p, m.id)).length; return <article className="card" key={p.id} style={{ marginBottom: 12, borderLeft: p.category === '긴급' ? '4px solid var(--danger)' : p.pinned ? '4px solid var(--brand-500)' : undefined, overflowWrap: 'anywhere' }}>
+      <div style={{ ...wrap, justifyContent: 'space-between' }}><strong style={{ color: p.category === '긴급' ? 'var(--danger)' : undefined }}>{p.pinned ? '📌 중요 · ' : ''}{p.category}</strong><small>{mine ? '확인 완료' : '미확인'}</small></div>
       <h2>{p.title}</h2><small>{stamp(p.created_at)}{p.revision > 1 ? ' · 내용 수정됨' : ''}</small>
       <p style={{ whiteSpace: 'pre-wrap' }}>{p.body}</p>
       <div style={wrap}>{mine ? <small>확인 시각: {stamp(mine.read_at)}</small> : <button disabled={busy} onClick={() => void acknowledge(p)}>공지 확인 완료</button>}{officer && <><button disabled={busy} onClick={() => setDetail(detail === p.id ? null : p.id)}>확인 명단 {count}/{members.length}명</button><button disabled={busy} onClick={() => { setEditing(p); setForm({ title: p.title, body: p.body, category: p.category, pinned: p.pinned }); setOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>수정</button><button disabled={busy} onClick={() => void remove(p)}>삭제</button></>}</div>

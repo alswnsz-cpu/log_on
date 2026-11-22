@@ -90,7 +90,8 @@ export default function AlbumInteractions({
     setReady(true)
   }, [albumId, userId])
 
-  useEffect(() => {
+    useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
   }, [load])
 
@@ -230,7 +231,7 @@ export default function AlbumInteractions({
 
         <button
           type="button"
-          className={`btn btn-sm ${liked ? '' : 'btn-light'}`}
+          className={`btn btn-sm ${liked ? '' : 'btn-ghost'}`}
           onClick={toggleLike}
           disabled={busy || !ready}
           aria-pressed={liked}
@@ -310,7 +311,7 @@ export default function AlbumInteractions({
 
                 <button
                   type="button"
-                  className="btn btn-light btn-sm"
+                  className="btn btn-ghost btn-sm"
                   onClick={() => setEditingId(null)}
                 >
                   취소
@@ -330,7 +331,7 @@ export default function AlbumInteractions({
             {c.user_id === userId && editingId !== c.id && (
               <button
                 type="button"
-                className="btn btn-light btn-sm"
+                className="btn btn-ghost btn-sm"
                 disabled={busy || !ready}
                 onClick={() => {
                   setEditingId(c.id)
