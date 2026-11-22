@@ -64,8 +64,8 @@
 | `copy_activities_to_records.sql`, `copy_portfolios_to_documents.sql` | 예전 데이터를 새 테이블로 **복사**하는 파일입니다. 옛 데이터가 있는 DB에서만 필요하고 새 DB에는 옮길 데이터가 없습니다 |
 | `migrate_existing_accounts_*.sql`, `seed_officer.sql` | 개인정보(이메일 등)가 들어 있어서 **저장소에 올리지 않는 파일**입니다(`.gitignore`로 막혀 있음). 새 DB에는 필요 없고, 첫 임원진 지정은 `HANDOVER.md` 8번의 문장을 씁니다 |
 
-## 이미 운영 중인 DB에서 아직 실행하지 않은 파일(2026-11-21 기준)
-개편 작업으로 새로 만든 아래 파일은 운영 DB에 **아직 실행하지 않았습니다**. 위 표의 순서대로 실행합니다.
+## 운영 DB에 적용한 개편 SQL(2026-11-22 적용 완료)
+개편 작업으로 새로 만든 아래 파일(21~28번)은 2026-11-22에 운영 DB에 **적용을 마쳤습니다**. 선택 파일 `copy_*.sql` 2개는 **실행하지 않았습니다**(옛 데이터 복사용).
 `add_meeting_notes.sql` → `add_content_permissions.sql` → `add_content_posts.sql` → `add_activity_records.sql` → (선택) `copy_activities_to_records.sql` → `add_projects.sql` → `add_notes.sql` → `add_portfolio_documents.sql` → (선택) `copy_portfolios_to_documents.sql` → `add_activity_feed.sql`
 
 ### 신규 통합 기능 SQL
