@@ -27,9 +27,10 @@ export const AREAS: Area[] = [
     key: 'plan',
     label: '활동 일정',
     description: '달력과 시간표, 공통 시간을 확인해요.',
-    paths: ['/calendar', '/schedule', '/common', '/members', '/meetings', '/content', '/tasks'],
+    paths: ['/calendar', '/schedule', '/common', '/members', '/meetings', '/content', '/tasks', '/notices'],
     items: [
       { label: '달력', to: '/calendar' },
+      { label: '공지사항', to: '/notices' },
       { label: '내 시간표', to: '/schedule', hideForAlumni: true },
       { label: '공통 시간', to: '/common', hideForAlumni: true },
       { label: '멤버별', to: '/members' },
@@ -42,7 +43,7 @@ export const AREAS: Area[] = [
     key: 'records',
     label: '활동 기록',
     description: '활동 기록과 토론, 활동 사진을 모아 봐요.',
-    paths: ['/records', '/projects', '/agendas', '/decisions', '/notes', '/archive'],
+    paths: ['/records', '/projects', '/agendas', '/decisions', '/notes', '/archive', '/logistics-insight', '/resource-library'],
     items: [
       { label: '활동 기록', to: '/records' },
       { label: '공모전·프로젝트', to: '/projects' },
@@ -50,14 +51,19 @@ export const AREAS: Area[] = [
       { label: '토론', to: '/agendas' },
       { label: '개별 노트', to: '/notes' },
       { label: '아카이브', to: '/archive' },
+      { label: '물류 인사이트', to: '/logistics-insight' },
+      { label: '자료실', to: '/resource-library' },
     ],
   },
   {
     key: 'portfolio',
     label: '포트폴리오',
     description: '나의 경력과 활동을 정리해요.',
-    paths: ['/portfolio'],
-    items: [{ label: '직무별 포트폴리오', to: '/portfolio' }],
+    paths: ['/portfolio', '/career-hub'],
+    items: [
+      { label: '직무별 포트폴리오', to: '/portfolio' },
+      { label: '커리어 허브', to: '/career-hub' },
+    ],
   },
   {
     key: 'explore',
