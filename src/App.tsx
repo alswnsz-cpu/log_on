@@ -6,6 +6,7 @@ import { useAuth } from './auth/useAuth'
 import AuthScreen from './auth/AuthScreen'
 import StatusScreen from './auth/StatusScreen'
 import Layout from './components/Layout'
+import StartAtHub from './components/StartAtHub'
 import Calendar from './pages/Calendar'
 import Hub from './pages/Hub'
 import Schedule from './pages/Schedule'
@@ -89,6 +90,8 @@ function ApprovedApp({ userId }: { userId: string }) {
   const open = done || alumni
 
   return (
+    <>
+    <StartAtHub open={open} />
     <Routes>
       <Route element={<Layout locked={!open} alumni={alumni} />}>
         <Route path="schedule" element={<Schedule done={done} onComplete={complete} />} />
@@ -128,6 +131,7 @@ function ApprovedApp({ userId }: { userId: string }) {
         <Route path="*" element={<Navigate to={open ? '/' : '/schedule'} replace />} />
       </Route>
     </Routes>
+    </>
   )
 }
 
