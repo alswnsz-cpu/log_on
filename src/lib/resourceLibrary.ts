@@ -65,24 +65,30 @@ function downloadErrorMessage(error: unknown): string {
   return '파일을 내려받지 못했습니다. 잠시 후 다시 시도해 주세요.'
 }
 export async function downloadLibraryFile(file: LibraryFile): Promise<void> {
-  // 파일 전체를 JS 메모리에 올리지 않고, 60초짜리 임시 주소를 브라우저가 직접 받게 한다.
+  // 파일을 Blob으로 받은 뒤 원래 이름(file_name)으로 저장한다(이름이 퍼센트 인코딩되지 않게).
   let result
   try {
-    result = await supabase.storage.from(LIBRARY_BUCKET).createSignedUrl(file.storage_path, 60, { download: file.file_name })
+    result = await supabase.storage.from(LIBRARY_BUCKET).download(file.storage_path)
   } catch (error) {
     console.error('자료실 내려받기 실패', error)
     throw new Error(downloadErrorMessage(error))
   }
-  if (result.error || !result.data?.signedUrl) {
+  if (result.error || !result.data) {
     console.error('자료실 내려받기 실패', result.error)
     throw new Error(downloadErrorMessage(result.error))
   }
-  const link = document.createElement('a')
-  link.href = result.data.signedUrl
-  link.rel = 'noopener'
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
+  const objectUrl = URL.createObjectURL(result.data)
+  try {
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = file.file_name
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 export async function removeLibraryFile(file: LibraryFile): Promise<void> {
   const bucket = supabase.storage.from(LIBRARY_BUCKET)

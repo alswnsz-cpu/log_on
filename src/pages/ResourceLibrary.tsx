@@ -53,7 +53,7 @@ export default function ResourceLibrary() {
     if(!approved) return setNotice('승인된 회원만 내려받을 수 있습니다.')
     if(!ready) return setNotice('자료 목록을 아직 불러오지 못했습니다. 새로고침해 주세요.')
     setNotice('')
-    try {await downloadLibraryFile(f)} catch(e){setNotice(e instanceof Error ? e.message : '파일을 내려받지 못했습니다. 잠시 후 다시 시도해 주세요.')}
+    try {await downloadLibraryFile(f);setNotice('')} catch(e){setNotice(e instanceof Error ? e.message : '파일을 내려받지 못했습니다. 잠시 후 다시 시도해 주세요.')}
   }
   async function submit(e:FormEvent){
     e.preventDefault()
@@ -85,6 +85,7 @@ export default function ResourceLibrary() {
       const del=await supabase.from('library_resources').delete().eq('id',item.id).select('id')
       if(del.error||!del.data?.length)throw new Error('자료 삭제 실패. 다시 시도해 주세요.')
       if(editing===item.id)reset()
+      setNotice('')
     })
   }
   const shown=items.filter(x=>(category==='전체'||x.category===category)&&(!savedOnly||x.saved)&&[x.title,x.description,x.author,...x.files.map(f=>f.file_name)].join(' ').toLowerCase().includes(query.trim().toLowerCase()))
