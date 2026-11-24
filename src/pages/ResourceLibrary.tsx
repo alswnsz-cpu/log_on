@@ -48,6 +48,13 @@ export default function ResourceLibrary() {
     try {await action()} catch(e){setNotice(e instanceof Error ? e.message : '작업에 실패했습니다. 다시 시도해 주세요.')}
     finally {await load();setBusy(false)}
   }
+  async function download(f:LibraryFile){
+    if(busy) return
+    if(!approved) return setNotice('승인된 회원만 내려받을 수 있습니다.')
+    if(!ready) return setNotice('자료 목록을 아직 불러오지 못했습니다. 새로고침해 주세요.')
+    setNotice('')
+    try {await downloadLibraryFile(f)} catch(e){setNotice(e instanceof Error ? e.message : '파일을 내려받지 못했습니다. 잠시 후 다시 시도해 주세요.')}
+  }
   async function submit(e:FormEvent){
     e.preventDefault()
     if(!uid) return
@@ -107,7 +114,7 @@ export default function ResourceLibrary() {
       <div className="section-head"><span className="badge">{item.category}</span><button className="btn btn-sm" aria-pressed={item.saved} disabled={busy||!ready} onClick={()=>void run(async()=>{const r=item.saved?await supabase.from('library_bookmarks').delete().eq('resource_id',item.id).eq('user_id',uid).select('resource_id'):await supabase.from('library_bookmarks').insert({resource_id:item.id}).select('resource_id');if(r.error||!r.data?.length)throw new Error('북마크 처리 실패')})}>{item.saved?'★':'☆'} 북마크</button></div>
       <h2>{item.title}</h2><p className="hint">{item.author} · {item.created_at.slice(0,10)}</p><p style={{whiteSpace:'pre-wrap'}}>{item.description}</p>
       {item.source_url&&/^https?:\/\//i.test(item.source_url)&&<p><a href={item.source_url} target="_blank" rel="noopener noreferrer">참고 링크 ↗</a></p>}
-      {item.files.map(f=><div key={f.id} className="card" style={{padding:10,margin:'8px 0'}}><strong>{f.file_name}</strong><p className="hint">{(f.size_bytes/1048576).toFixed(2)} MB</p><div className="actions" style={{flexWrap:'wrap'}}><button className="btn btn-sm" disabled={busy||!ready} onClick={()=>void run(()=>downloadLibraryFile(f))}>다운로드</button>{(item.user_id===uid||officer)&&<button className="btn btn-sm" disabled={busy||!ready} onClick={async()=>{if(await dialog.confirm({message:'첨부파일을 삭제할까요?',danger:true}))await run(()=>removeLibraryFile(f))}}>첨부 삭제</button>}</div></div>)}
+      {item.files.map(f=><div key={f.id} className="card" style={{padding:10,margin:'8px 0'}}><strong>{f.file_name}</strong><p className="hint">{(f.size_bytes/1048576).toFixed(2)} MB</p><div className="actions" style={{flexWrap:'wrap'}}><button className="btn btn-sm" disabled={busy} onClick={()=>void download(f)}>다운로드</button>{(item.user_id===uid||officer)&&<button className="btn btn-sm" disabled={busy||!ready} onClick={async()=>{if(await dialog.confirm({message:'첨부파일을 삭제할까요?',danger:true}))await run(()=>removeLibraryFile(f))}}>첨부 삭제</button>}</div></div>)}
       <div className="actions">{item.user_id===uid&&<button className="btn btn-sm" disabled={busy||!ready} onClick={()=>{setEditing(item.id);setForm({title:item.title,description:item.description,category:item.category,source_url:item.source_url??'',rights_confirmed:false});setFiles([]);setFileKey(k=>k+1);setOpen(true);window.scrollTo(0,0)}}>수정</button>}{(item.user_id===uid||officer)&&<button className="btn btn-sm" disabled={busy||!ready} onClick={()=>void remove(item)}>삭제</button>}</div>
     </section>)}
   </>
