@@ -6,6 +6,7 @@ import { useAuth } from './auth/useAuth'
 import AuthScreen from './auth/AuthScreen'
 import StatusScreen from './auth/StatusScreen'
 import Layout from './components/Layout'
+import StartAtHub, { ResetStartAtHub } from './components/StartAtHub'
 import Calendar from './pages/Calendar'
 import Hub from './pages/Hub'
 import Schedule from './pages/Schedule'
@@ -89,6 +90,8 @@ function ApprovedApp({ userId }: { userId: string }) {
   const open = done || alumni
 
   return (
+    <>
+    <StartAtHub open={open} />
     <Routes>
       <Route element={<Layout locked={!open} alumni={alumni} />}>
         <Route path="schedule" element={<Schedule done={done} onComplete={complete} />} />
@@ -128,6 +131,7 @@ function ApprovedApp({ userId }: { userId: string }) {
         <Route path="*" element={<Navigate to={open ? '/' : '/schedule'} replace />} />
       </Route>
     </Routes>
+    </>
   )
 }
 
@@ -141,7 +145,15 @@ function Gate() {
       </div>
     )
   }
-  if (!session) return <AuthScreen />
+  // 세션이 없으면(로그아웃 포함) 시작 화면 판단을 초기화해, 같은 탭에서 다시 로그인하면 허브로 가게 한다
+  if (!session) {
+    return (
+      <>
+        <ResetStartAtHub />
+        <AuthScreen />
+      </>
+    )
+  }
   if (!profile) return <StatusScreen kind={profileError ? 'error' : 'pending'} />
   if (profile.status === 'pending') return <StatusScreen kind="pending" />
   if (profile.status === 'rejected') return <StatusScreen kind="rejected" />
