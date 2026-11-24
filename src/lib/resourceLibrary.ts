@@ -42,17 +42,34 @@ export async function uploadLibraryFile(uid: string, resourceId: string, slot: n
     throw new Error('파일 업로드를 확인하지 못했습니다. 자료의 첨부파일을 확인하고 삭제 후 다시 등록해 주세요.')
   }
 }
+function downloadErrorMessage(error: unknown): string {
+  const e = error as { status?: number | string; statusCode?: number | string; message?: string; name?: string } | null
+  const status = Number(e?.status ?? e?.statusCode)
+  const text = (e?.message ?? '').toLowerCase()
+  if (status === 401 || status === 403 || text.includes('row-level security') || text.includes('unauthorized')) return '이 파일을 내려받을 권한이 없습니다. 승인된 계정으로 로그인했는지 확인해 주세요.'
+  if (status === 404 || text.includes('not found')) return '파일을 찾을 수 없습니다. 삭제되었거나 업로드가 완료되지 않았을 수 있습니다.'
+  if (!Number.isFinite(status) && (text.includes('fetch') || text.includes('network') || e?.name === 'StorageUnknownError')) return '네트워크 연결을 확인한 뒤 다시 시도해 주세요.'
+  return '파일을 내려받지 못했습니다. 잠시 후 다시 시도해 주세요.'
+}
 export async function downloadLibraryFile(file: LibraryFile): Promise<void> {
-  const result = await supabase.storage.from(LIBRARY_BUCKET).download(file.storage_path)
-  if (result.error || !result.data) throw new Error('파일을 다운로드하지 못했습니다.')
-  const url = URL.createObjectURL(result.data)
+  // 파일 전체를 JS 메모리에 올리지 않고, 60초짜리 임시 주소를 브라우저가 직접 받게 한다.
+  let result
+  try {
+    result = await supabase.storage.from(LIBRARY_BUCKET).createSignedUrl(file.storage_path, 60, { download: file.file_name })
+  } catch (error) {
+    console.error('자료실 내려받기 실패', error)
+    throw new Error(downloadErrorMessage(error))
+  }
+  if (result.error || !result.data?.signedUrl) {
+    console.error('자료실 내려받기 실패', result.error)
+    throw new Error(downloadErrorMessage(result.error))
+  }
   const link = document.createElement('a')
-  link.href = url
-  link.download = file.file_name
+  link.href = result.data.signedUrl
+  link.rel = 'noopener'
   document.body.appendChild(link)
   link.click()
   link.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 30000)
 }
 export async function removeLibraryFile(file: LibraryFile): Promise<void> {
   const bucket = supabase.storage.from(LIBRARY_BUCKET)
