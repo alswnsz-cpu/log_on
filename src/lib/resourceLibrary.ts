@@ -8,6 +8,7 @@ export const MIME: Record<string, string> = {
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv',
+  zip: 'application/octet-stream', '7z': 'application/octet-stream', // 압축파일은 브라우저가 MIME을 제각각 보내므로 octet-stream으로 보낸다(버킷이 허용함)
 }
 export const ACCEPT = Object.keys(MIME).map(ext => `.${ext}`).join(',')
 export interface LibraryFile {
