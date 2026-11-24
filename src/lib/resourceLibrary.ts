@@ -38,8 +38,21 @@ export async function uploadLibraryFile(uid: string, resourceId: string, slot: n
   if (record.error || !record.data) throw new Error('첨부파일 정보를 등록하지 못했습니다.')
   const uploaded = await supabase.storage.from(LIBRARY_BUCKET).upload(path, file, { contentType: MIME[ext], upsert: false })
   if (uploaded.error) {
-    // Keep the reservation: an ambiguous network failure may have stored the object.
-    throw new Error('파일 업로드를 확인하지 못했습니다. 자료의 첨부파일을 확인하고 삭제 후 다시 등록해 주세요.')
+    console.error('자료실 업로드 실패', uploaded.error)
+    // 업로드가 실패하면 먼저 만든 목록 기록을 지운다(파일 없는 기록이 남지 않게).
+    // 네트워크 오류처럼 애매한 실패에서 파일이 저장됐을 수 있으니, 저장소 파일도 함께 지워 본다(실패해도 무시).
+    try { await supabase.storage.from(LIBRARY_BUCKET).remove([path]) } catch (error) { console.error('자료실 업로드 실패 후 저장소 정리 실패', error) }
+    let rolledBack = false
+    try {
+      const deleted = await supabase.from('library_files').delete().eq('id', record.data.id).select('id')
+      rolledBack = !deleted.error && !!deleted.data?.length
+      if (!rolledBack) console.error('자료실 업로드 실패 후 기록 삭제 실패', deleted.error)
+    } catch (error) {
+      console.error('자료실 업로드 실패 후 기록 삭제 실패', error)
+    }
+    throw new Error(rolledBack
+      ? `파일을 올리지 못했습니다(${file.name}). 다시 시도해 주세요.`
+      : `파일을 올리지 못했고 목록 기록도 정리하지 못했습니다(${file.name}). 자료의 첨부파일을 삭제한 뒤 다시 등록해 주세요.`)
   }
 }
 function downloadErrorMessage(error: unknown): string {
