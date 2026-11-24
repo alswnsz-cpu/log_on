@@ -1,3 +1,6 @@
+﻿import DebateWorkflow from '../components/debate/DebateWorkflow'
+import { getDebateSession } from '../lib/debateApi'
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -34,7 +37,7 @@ interface Decision {
 
 const STANCES: Stance[] = ['agree', 'disagree', 'hold']
 
-export default function AgendaDetail() {
+function LegacyAgendaDetail() {
   const { id } = useParams()
   const agendaId = Number(id)
   const navigate = useNavigate()
@@ -389,4 +392,121 @@ export default function AgendaDetail() {
       )}
     </>
   )
+}
+
+type DebateDetailMode =
+  | 'loading'
+  | 'legacy'
+  | 'workflow'
+  | 'error'
+
+export default function AgendaDetail() {
+  const { id } = useParams()
+
+  return <AgendaDetailRouter key={id} />
+}
+
+function AgendaDetailRouter() {
+  const { id } = useParams()
+  const agendaId = Number(id)
+  const location = useLocation()
+
+  const fromList =
+    (location.state as { back?: unknown } | null)?.back
+
+  const back =
+    typeof fromList === 'string' &&
+    fromList.startsWith('/agendas')
+      ? fromList
+      : '/agendas'
+
+  const [mode, setMode] =
+    useState<DebateDetailMode>('loading')
+
+  const [retry, setRetry] = useState(0)
+
+  useEffect(() => {
+    let active = true
+
+    async function detect() {
+      if (
+        !Number.isSafeInteger(agendaId) ||
+        agendaId <= 0
+      ) {
+        if (active) setMode('error')
+        return
+      }
+
+      try {
+        const session =
+          await getDebateSession(agendaId)
+
+        if (active) {
+          setMode(
+            session ? 'workflow' : 'legacy',
+          )
+        }
+      } catch (err) {
+        console.error(
+          'Debate type lookup failed:',
+          err,
+        )
+
+        if (active) setMode('error')
+      }
+    }
+
+    void detect()
+
+    return () => {
+      active = false
+    }
+  }, [agendaId, retry])
+
+  if (mode === 'loading') {
+    return (
+      <section className="card">
+        <p>토론 정보를 불러오는 중...</p>
+      </section>
+    )
+  }
+
+  if (mode === 'error') {
+    return (
+      <section className="card">
+        <p className="msg error" role="alert">
+          토론 정보를 확인하지 못했습니다.
+          잠시 후 다시 시도해 주세요.
+        </p>
+
+        <div className="actions">
+          <button
+            className="btn"
+            onClick={() => {
+              setMode('loading')
+              setRetry(value => value + 1)
+            }}
+          >
+            다시 시도
+          </button>
+
+          <Link to={back}>
+            토론 목록으로
+          </Link>
+        </div>
+      </section>
+    )
+  }
+
+  if (mode === 'workflow') {
+    return (
+      <DebateWorkflow
+        key={agendaId}
+        agendaId={agendaId}
+        back={back}
+      />
+    )
+  }
+
+  return <LegacyAgendaDetail key={agendaId} />
 }

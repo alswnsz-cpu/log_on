@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+﻿import { createDebateAgenda, getDebateSessions } from '../lib/debateApi'
+import { DEBATE_STAGES, DEBATE_STAGE_LABEL, type DebateStage } from '../lib/debateWorkflow'
+
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
@@ -29,6 +32,8 @@ function parseTab(value: string | null): Tab {
 export default function Agendas() {
   const { profile } = useAuth()
   const isOfficer = profile?.role === 'officer'
+  const [stages, setStages] = useState<Record<number, DebateStage>>({})
+  const requestId = useRef(0)
   const [agendas, setAgendas] = useState<Agenda[]>([])
   const [counts, setCounts] = useState<Record<number, StanceCounts>>({})
   const [loading, setLoading] = useState(true)
@@ -48,23 +53,42 @@ export default function Agendas() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const [a, o] = await Promise.all([
-      supabase.from('agendas').select('id, title, description, status, created_at').order('created_at', { ascending: false }),
-      supabase.from('opinions').select('agenda_id, stance'),
-    ])
-    if (a.error || o.error) {
-      setLoadError('토론을 불러오지 못했습니다.')
-    } else {
-      setLoadError(null)
-      setAgendas(a.data as Agenda[])
+    const currentRequest = ++requestId.current
+
+    try {
+      const [a, o, sessions] = await Promise.all([
+        supabase.from('agendas').select('id, title, description, status, created_at').order('created_at', { ascending: false }),
+        supabase.from('opinions').select('agenda_id, stance'),
+        getDebateSessions(),
+      ])
+
+      if (a.error) throw a.error
+      if (o.error) throw o.error
+
+      if (currentRequest !== requestId.current) return
+
       const grouped: Record<number, Stance[]> = {}
+
       for (const row of o.data as { agenda_id: number; stance: Stance }[]) {
         if (!grouped[row.agenda_id]) grouped[row.agenda_id] = []
         grouped[row.agenda_id].push(row.stance)
       }
+
+      setAgendas(a.data as Agenda[])
       setCounts(Object.fromEntries(Object.entries(grouped).map(([id, s]) => [id, countStances(s)])))
+      setStages(Object.fromEntries(sessions.map(s => [s.agenda_id, s.stage])))
+      setLoadError(null)
+    } catch (err) {
+      console.error('Debate list loading failed:', err)
+
+      if (currentRequest === requestId.current) {
+        setLoadError('토론을 불러오지 못했습니다.')
+      }
+    } finally {
+      if (currentRequest === requestId.current) {
+        setLoading(false)
+      }
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -73,16 +97,36 @@ export default function Agendas() {
   }, [load])
   useRealtimeRefresh('agendas-list', load)
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void load()
+    }, 5000)
+
+    return () => {
+      window.clearInterval(timer)
+      // Invalidate pending requests during cleanup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestId.current++
+    }
+  }, [load])
+
   async function create(e: FormEvent) {
     e.preventDefault()
+    if (saving || !isOfficer || loading || loadError) return
     const t = title.trim()
     if (t.length < 1 || t.length > 100) return setFormError('제목은 1~100자로 입력해 주세요.')
     if (description.length > 2000) return setFormError('설명은 2000자 이하로 입력해 주세요.')
     setFormError(null)
     setSaving(true)
-    const { error } = await supabase.from('agendas').insert({ title: t, description: description.trim() || null })
-    setSaving(false)
-    if (error) return setFormError('토론을 만들지 못했습니다. 임원진 권한을 확인해 주세요.')
+    try {
+      await createDebateAgenda(t, description)
+    } catch (err) {
+      console.error('Debate creation failed:', err)
+      setFormError('토론을 만들지 못했습니다. 임원진 권한과 DB 연결을 확인해 주세요.')
+      return
+    } finally {
+      setSaving(false)
+    }
     setTitle('')
     setDescription('')
     setShowForm(false)
@@ -119,7 +163,7 @@ export default function Agendas() {
             </label>
             {formError && <p className="msg error" role="alert">{formError}</p>}
             <div className="actions">
-              <button className="btn" disabled={saving}>{saving ? '저장 중...' : '토론 만들기'}</button>
+              <button className="btn" disabled={saving || loading || Boolean(loadError)}>{saving ? '저장 중...' : '토론 만들기'}</button>
             </div>
           </form>
         )}
@@ -157,15 +201,47 @@ export default function Agendas() {
             ) : (
               <div className="card-grid">
                 {shown.map((a) => {
+                  const stage = stages[a.id]
                   const c = counts[a.id] ?? { agree: 0, disagree: 0, hold: 0 }
                   return (
                     <Link key={a.id} to={`/agendas/${a.id}`} state={{ back: backTo }} className="card agenda-card">
                       <div className="section-head">
                         <h2>{a.title}</h2>
-                        <span className={a.status === 'decided' ? 'badge ok' : 'badge'}>{STATUS_LABEL[a.status]}</span>
+                        <span className={a.status === 'decided' ? 'badge ok' : 'badge'}>{stage ? DEBATE_STAGE_LABEL[stage] : STATUS_LABEL[a.status]}</span>
                       </div>
-                      <p className="hint">의견 {c.agree + c.disagree + c.hold}개</p>
-                      <StanceBar counts={c} />
+                      {stage ? (
+                        <div className="debate-list-progress">
+                          <p className="hint">단계별 토론</p>
+
+                          <div
+                            className="debate-list-track"
+                            role="img"
+                            aria-label={`${DEBATE_STAGES.indexOf(stage) + 1}/5단계`}
+                          >
+                            {DEBATE_STAGES.map((s, i) => (
+                              <span
+                                key={s}
+                                className={
+                                  i <= DEBATE_STAGES.indexOf(stage)
+                                    ? 'debate-list-segment active'
+                                    : 'debate-list-segment'
+                                }
+                              />
+                            ))}
+                          </div>
+
+                          <p className="hint">
+                            {DEBATE_STAGES.indexOf(stage) + 1}/5단계
+                            {' · '}
+                            {DEBATE_STAGE_LABEL[stage]}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="hint">의견 {c.agree + c.disagree + c.hold}개</p>
+                          <StanceBar counts={c} />
+                        </>
+                      )}
                     </Link>
                   )
                 })}

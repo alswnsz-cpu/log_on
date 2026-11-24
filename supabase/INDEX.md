@@ -1,4 +1,4 @@
-# SQL 파일 안내 (supabase 폴더)
+﻿# SQL 파일 안내 (supabase 폴더)
 
 이 폴더의 SQL 파일은 Supabase 대시보드의 **SQL Editor**에서 실행합니다. 파일 안의 내용을 통째로 복사해 붙여 넣고 Run을 누릅니다.
 파일마다 맨 위에 "무엇을 하는 파일인지", 맨 아래에 `[R] 되돌리기` 문장(주석)이 있습니다.
@@ -53,10 +53,11 @@
 | 35 | `add_library_archive_ext.sql` | 자료실 첨부에 zip·7z 허용(확장자 CHECK 제약 교체). 2026-11-24 운영 적용 완료 | 파일 끝 `[R]` |
 | 36 | `add_library_size_50mb.sql` | 자료실 첨부 파일 1개당 상한 20MB → 50MB(size_bytes CHECK 제약 교체 + 버킷 file_size_limit). 2026-11-24 운영 적용 완료 | 파일 끝 `[R]` |
 | 37 | `add_library_zip_mime.sql` | 자료실 버킷 허용 MIME에 zip·7z 계열 3개 추가(압축파일 업로드가 거절되던 문제). **운영 미적용**(사람이 SQL Editor에서 실행) | 파일 끝 `[R]` |
+| 38 | `add_debate_workflow.sql` **[검증 전]** | 단계별 토론 시스템, 참여자 지정, 사전·사후 의견, MVP 익명 투표, 최종 통계 보존. **운영 미적용** | 파일 끝 `[R]` |
 
 **34번이 가입 함수 파일 중 마지막인 이유:** 이 파일은 가입 확인 함수(`validate_signup`)에서 가입 코드 검사를 뺀 최신 버전입니다. 앞의 옛 파일(3번 등)을 나중에 다시 실행하면 가입 코드 검사가 되살아나서 새 가입이 막힙니다. 옛 파일을 다시 실행했다면 반드시 34번을 마지막에 다시 실행하세요. (35~37번은 자료실 설정만 바꾸고 가입 함수와 무관해서 순서에 영향을 주지 않습니다. 34번 다음에 실행합니다.)
 
-**첫 임원진 만들기:** 37번까지 끝낸 뒤 임원진이 될 사람 2명이 앱에서 먼저 가입하고, 아래 "첫 임원진 지정"을 실행합니다(`HANDOVER.md` 8번에 문장이 있습니다).
+**첫 임원진 만들기:** 38번까지 끝낸 뒤 임원진이 될 사람 2명이 앱에서 먼저 가입하고, 아래 "첫 임원진 지정"을 실행합니다(`HANDOVER.md` 8번에 문장이 있습니다).
 
 ## 새 DB에서는 실행하지 않는 파일
 
@@ -72,7 +73,7 @@
 `add_meeting_notes.sql` → `add_content_permissions.sql` → `add_content_posts.sql` → `add_activity_records.sql` → (선택) `copy_activities_to_records.sql` → `add_projects.sql` → `add_notes.sql` → `add_portfolio_documents.sql` → (선택) `copy_portfolios_to_documents.sql` → `add_activity_feed.sql`
 
 ### 신규 통합 기능 SQL
-29~33번(앨범 상호작용, 물류 인사이트, 자료실, 커리어 허브, 공지사항)은 2026-11-22에 운영 DB에 적용을 마쳤습니다(1~34번 전부 적용). 35번(`add_library_archive_ext.sql`)은 2026-11-24에 적용을 마쳤습니다. 36번(`add_library_size_50mb.sql`)도 2026-11-24에 적용을 마쳤습니다. **37번(`add_library_zip_mime.sql`)만 운영 미적용**이며 사람이 SQL Editor에서 실행합니다. 이미 적용한 파일은 다시 실행하지 않습니다.
+29~33번(앨범 상호작용, 물류 인사이트, 자료실, 커리어 허브, 공지사항)은 2026-11-22에 운영 DB에 적용을 마쳤습니다(1~34번 전부 적용). 35번(`add_library_archive_ext.sql`)은 2026-11-24에 적용을 마쳤습니다. 36번(`add_library_size_50mb.sql`)도 2026-11-24에 적용을 마쳤습니다. **37번(`add_library_zip_mime.sql`)과 38번(`add_debate_workflow.sql`)은 운영 미적용**이며 사람이 SQL Editor에서 실행합니다. 이미 적용한 파일은 다시 실행하지 않습니다.
 
 ## 함수를 덮어쓰는 파일(다시 실행하면 최신 내용이 옛 내용으로 바뀝니다)
 
