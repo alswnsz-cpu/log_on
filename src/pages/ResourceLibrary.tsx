@@ -93,7 +93,8 @@ export default function ResourceLibrary() {
         <label>카테고리<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
         <label>자료 설명<textarea rows={3} maxLength={3000} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label>
         <label>외부 참고 링크<input type="url" maxLength={2048} value={form.source_url} onChange={e=>setForm({...form,source_url:e.target.value})}/></label>
-        <label>첨부파일 (최대 3개, 개당 20MB)<input key={fileKey} type="file" multiple accept={ACCEPT} onChange={e=>{const picked=Array.from(e.target.files??[]);const err=validateFiles(picked,items.find(x=>x.id===editing)?.files.length??0);setNotice(err??'');setFiles(err?[]:picked);if(err)setFileKey(k=>k+1)}}/></label>
+        <label>첨부파일 (최대 3개, 개당 20MB · pdf, hwp, hwpx, pptx, docx, xlsx, csv, zip, 7z)<input key={fileKey} type="file" multiple accept={ACCEPT} onChange={e=>{const picked=Array.from(e.target.files??[]);const err=validateFiles(picked,items.find(x=>x.id===editing)?.files.length??0);setNotice(err??'');setFiles(err?[]:picked);if(err)setFileKey(k=>k+1)}}/></label>
+        <p className="hint">압축파일(zip, 7z)은 출처가 확실한 자료만 올려 주세요.</p>
         {files.map((f,i)=><p className="hint" key={i}>{f.name}</p>)}
         <label className="check-row"><input type="checkbox" required checked={form.rights_confirmed} onChange={e=>setForm({...form,rights_confirmed:e.target.checked})}/> 공유 권한이 있는 자료임을 확인합니다.</label>
         <button className="btn" disabled={busy||!ready}>{busy?'처리 중…':editing?'수정 저장':'자료 등록'}</button>
