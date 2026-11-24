@@ -50,11 +50,12 @@
 | 32 | `add_career_hub.sql` **[검증 전]** | 기업·직무·채용·취업 정보 공유 | 파일 끝 `[R]` |
 | 33 | `add_notices.sql` **[검증 전]** | 공지사항·회원별 확인 기록 | 파일 끝 `[R]` |
 | 34 | `remove_signup_code.sql` | 가입 코드 검사 제거(가입 함수 파일 중 **마지막**에 실행) | 이 파일을 되돌리는 문장은 없고, 가입 코드 검사가 필요하면 `add_signup_application.sql`의 가입 함수 부분을 다시 실행합니다 |
-| 35 | `add_library_archive_ext.sql` | 자료실 첨부에 zip·7z 허용(확장자 CHECK 제약 교체). **운영 미적용**(사람이 SQL Editor에서 실행, 화면 배포보다 먼저) | 파일 끝 `[R]` |
+| 35 | `add_library_archive_ext.sql` | 자료실 첨부에 zip·7z 허용(확장자 CHECK 제약 교체). 2026-11-24 운영 적용 완료 | 파일 끝 `[R]` |
+| 36 | `add_library_size_50mb.sql` | 자료실 첨부 파일 1개당 상한 20MB → 50MB(size_bytes CHECK 제약 교체 + 버킷 file_size_limit). **운영 미적용**(사람이 SQL Editor에서 실행, 화면 배포보다 먼저) | 파일 끝 `[R]` |
 
 **34번이 가입 함수 파일 중 마지막인 이유:** 이 파일은 가입 확인 함수(`validate_signup`)에서 가입 코드 검사를 뺀 최신 버전입니다. 앞의 옛 파일(3번 등)을 나중에 다시 실행하면 가입 코드 검사가 되살아나서 새 가입이 막힙니다. 옛 파일을 다시 실행했다면 반드시 34번을 마지막에 다시 실행하세요. (35번은 자료실 제약만 바꾸고 가입 함수와 무관해서 순서에 영향을 주지 않습니다. 34번 다음에 실행합니다.)
 
-**첫 임원진 만들기:** 35번까지 끝낸 뒤 임원진이 될 사람 2명이 앱에서 먼저 가입하고, 아래 "첫 임원진 지정"을 실행합니다(`HANDOVER.md` 8번에 문장이 있습니다).
+**첫 임원진 만들기:** 36번까지 끝낸 뒤 임원진이 될 사람 2명이 앱에서 먼저 가입하고, 아래 "첫 임원진 지정"을 실행합니다(`HANDOVER.md` 8번에 문장이 있습니다).
 
 ## 새 DB에서는 실행하지 않는 파일
 
@@ -70,7 +71,7 @@
 `add_meeting_notes.sql` → `add_content_permissions.sql` → `add_content_posts.sql` → `add_activity_records.sql` → (선택) `copy_activities_to_records.sql` → `add_projects.sql` → `add_notes.sql` → `add_portfolio_documents.sql` → (선택) `copy_portfolios_to_documents.sql` → `add_activity_feed.sql`
 
 ### 신규 통합 기능 SQL
-29~33번(앨범 상호작용, 물류 인사이트, 자료실, 커리어 허브, 공지사항)은 2026-11-22에 운영 DB에 적용을 마쳤습니다(1~34번 전부 적용). **35번(`add_library_archive_ext.sql`)만 운영 미적용**이며 사람이 SQL Editor에서 실행합니다. 이미 적용한 파일은 다시 실행하지 않습니다.
+29~33번(앨범 상호작용, 물류 인사이트, 자료실, 커리어 허브, 공지사항)은 2026-11-22에 운영 DB에 적용을 마쳤습니다(1~34번 전부 적용). 35번(`add_library_archive_ext.sql`)은 2026-11-24에 적용을 마쳤습니다. **36번(`add_library_size_50mb.sql`)만 운영 미적용**이며 사람이 SQL Editor에서 실행합니다. 이미 적용한 파일은 다시 실행하지 않습니다.
 
 ## 함수를 덮어쓰는 파일(다시 실행하면 최신 내용이 옛 내용으로 바뀝니다)
 

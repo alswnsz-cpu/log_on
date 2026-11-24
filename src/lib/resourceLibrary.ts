@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 
 export const LIBRARY_BUCKET = 'logon-resources'
 export const MAX_FILES = 3
-export const MAX_BYTES = 20 * 1024 * 1024
+export const MAX_BYTES = 50 * 1024 * 1024
 export const MIME: Record<string, string> = {
   pdf: 'application/pdf', hwp: 'application/x-hwp', hwpx: 'application/hwp+zip',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -24,7 +24,7 @@ export function validateFiles(files: File[], existing = 0): string | null {
   for (const file of files) {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
     if (!Object.hasOwn(MIME, ext)) return `지원하지 않는 파일 형식: ${file.name}`
-    if (file.size < 1 || file.size > MAX_BYTES) return `파일은 1바이트 이상 20MB 이하여야 합니다: ${file.name}`
+    if (file.size < 1 || file.size > MAX_BYTES) return `파일은 1바이트 이상 50MB 이하여야 합니다: ${file.name}`
     if (file.name.length > 255) return '파일 이름은 255자 이하여야 합니다.'
   }
   return null
