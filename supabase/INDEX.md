@@ -80,6 +80,7 @@
 | `fix_signup_trigger.sql`, `fix_username_login.sql`, `fix_reopen_agenda.sql` | 예전 `schema.sql`로 만든 DB를 고치던 파일입니다. 지금의 `schema.sql`에 이미 합쳐져 있어서 새 DB에서 또 실행하면 "이미 있다"는 오류가 납니다 |
 | `add_logon_tables.sql` | `logon_1`~`logon_3`으로 쪼개기 전의 원본입니다. 새 DB에서는 쪼갠 3개를 씁니다 |
 | `copy_activities_to_records.sql`, `copy_portfolios_to_documents.sql` | 예전 데이터를 새 테이블로 **복사**하는 파일입니다. 옛 데이터가 있는 DB에서만 필요하고 새 DB에는 옮길 데이터가 없습니다 |
+| `handover_cleanup_DRAFT.sql` | **실행 금지 초안**(인수인계 전 시험 계정·데이터 정리용). 쓰려면 반드시 백업과 파일 안의 SELECT 확인을 먼저 한 뒤에만, 관리자가 실행합니다. 시험 계정 `test`와 29~33번 신규 테이블·`logon-resources` 버킷은 빠져 있습니다(`HANDOVER.md` 3-5) |
 | `migrate_existing_accounts_*.sql`, `seed_officer.sql` | 개인정보(이메일 등)가 들어 있어서 **저장소에 올리지 않는 파일**입니다(`.gitignore`로 막혀 있음). 새 DB에는 필요 없고, 첫 임원진 지정은 `HANDOVER.md` 8번의 문장을 씁니다 |
 
 ## 운영 DB에 적용한 개편 SQL(2026-11-22 적용 완료)
