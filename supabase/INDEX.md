@@ -5,6 +5,21 @@
 
 > **[검증 전]** 아래 "새 DB를 처음부터 만들 때" 순서는 파일 설명과 내용을 읽고 정리한 것이며, 실제 새 DB에서 처음부터 실행해 본 적은 없습니다. 처음 해 볼 때는 반드시 시험용 프로젝트에서 먼저 해 보세요.
 
+## 운영 DB 현재 상태
+**SQL 1~37번이 모두 적용돼 있습니다.** 38번(`add_debate_workflow.sql`, 토론 워크플로)은 `feat/debate-workflow` 브랜치에만 있고 **미적용**입니다(검토 중, 동료가 개인 Supabase에서 시험 예정). 선택 파일 `copy_*.sql` 2개는 실행하지 않았습니다.
+
+| 번호 | 운영 적용일 |
+|---|---|
+| 1~20 | 2026-11-22 이전(파일별 날짜는 확인 필요) |
+| 21~28 | 2026-11-22 |
+| 29~33 | 2026-11-22 |
+| 34 | 위 날짜들보다 이전(파일 첫 줄에는 "2026-11-17 실행 완료"라고 적혀 있음) |
+| 35~37 | 2026-11-24 |
+| 38 | **미적용**(이 브랜치에는 파일이 없음) |
+
+- 아래 표의 **[검증 전]** 은 "화면·동작을 직접 확인한 기록이 없음"이라는 뜻이고, **적용 여부와는 별개**입니다.
+- 일부 SQL 파일(예: 35~37번)의 맨 위 설명에는 아직 "운영 미적용"이라고 적혀 있습니다. 파일을 만들 때의 설명이며, **현재 상태는 이 절이 기준**입니다(기존 SQL 파일은 고치지 않습니다). 35번 설명의 "압축파일은 application/octet-stream으로 올린다"도 실제와 달랐고, 그래서 37번을 추가했습니다.
+
 ## 지켜야 할 규칙
 1. **기존 SQL 파일은 고치지 않습니다.** 바꿀 일이 생기면 새 SQL 파일을 만듭니다(새 테이블·함수·정책을 "추가"하는 방식).
 2. **SQL을 먼저, 화면(프런트) 배포는 나중에** 합니다. 화면이 먼저 나가면 없는 테이블을 읽으려다 오류가 납니다.
@@ -52,7 +67,7 @@
 | 34 | `remove_signup_code.sql` | 가입 코드 검사 제거(가입 함수 파일 중 **마지막**에 실행) | 이 파일을 되돌리는 문장은 없고, 가입 코드 검사가 필요하면 `add_signup_application.sql`의 가입 함수 부분을 다시 실행합니다 |
 | 35 | `add_library_archive_ext.sql` | 자료실 첨부에 zip·7z 허용(확장자 CHECK 제약 교체). 2026-11-24 운영 적용 완료 | 파일 끝 `[R]` |
 | 36 | `add_library_size_50mb.sql` | 자료실 첨부 파일 1개당 상한 20MB → 50MB(size_bytes CHECK 제약 교체 + 버킷 file_size_limit). 2026-11-24 운영 적용 완료 | 파일 끝 `[R]` |
-| 37 | `add_library_zip_mime.sql` | 자료실 버킷 허용 MIME에 zip·7z 계열 3개 추가(압축파일 업로드가 거절되던 문제). **운영 미적용**(사람이 SQL Editor에서 실행) | 파일 끝 `[R]` |
+| 37 | `add_library_zip_mime.sql` | 자료실 버킷 허용 MIME에 `application/zip`, `application/x-zip-compressed`, `application/x-7z-compressed` 추가(압축파일 업로드가 거절되던 문제). 2026-11-24 운영 적용 완료 | 파일 끝 `[R]` |
 
 **34번이 가입 함수 파일 중 마지막인 이유:** 이 파일은 가입 확인 함수(`validate_signup`)에서 가입 코드 검사를 뺀 최신 버전입니다. 앞의 옛 파일(3번 등)을 나중에 다시 실행하면 가입 코드 검사가 되살아나서 새 가입이 막힙니다. 옛 파일을 다시 실행했다면 반드시 34번을 마지막에 다시 실행하세요. (35~37번은 자료실 설정만 바꾸고 가입 함수와 무관해서 순서에 영향을 주지 않습니다. 34번 다음에 실행합니다.)
 
@@ -65,6 +80,7 @@
 | `fix_signup_trigger.sql`, `fix_username_login.sql`, `fix_reopen_agenda.sql` | 예전 `schema.sql`로 만든 DB를 고치던 파일입니다. 지금의 `schema.sql`에 이미 합쳐져 있어서 새 DB에서 또 실행하면 "이미 있다"는 오류가 납니다 |
 | `add_logon_tables.sql` | `logon_1`~`logon_3`으로 쪼개기 전의 원본입니다. 새 DB에서는 쪼갠 3개를 씁니다 |
 | `copy_activities_to_records.sql`, `copy_portfolios_to_documents.sql` | 예전 데이터를 새 테이블로 **복사**하는 파일입니다. 옛 데이터가 있는 DB에서만 필요하고 새 DB에는 옮길 데이터가 없습니다 |
+| `handover_cleanup_DRAFT.sql` | **실행 금지 초안**(인수인계 전 시험 계정·데이터 정리용). 쓰려면 반드시 백업과 파일 안의 SELECT 확인을 먼저 한 뒤에만, 관리자가 실행합니다. 시험 계정 `test`와 29~33번 신규 테이블·`logon-resources` 버킷은 빠져 있습니다(`HANDOVER.md` 3-5) |
 | `migrate_existing_accounts_*.sql`, `seed_officer.sql` | 개인정보(이메일 등)가 들어 있어서 **저장소에 올리지 않는 파일**입니다(`.gitignore`로 막혀 있음). 새 DB에는 필요 없고, 첫 임원진 지정은 `HANDOVER.md` 8번의 문장을 씁니다 |
 
 ## 운영 DB에 적용한 개편 SQL(2026-11-22 적용 완료)
@@ -72,7 +88,10 @@
 `add_meeting_notes.sql` → `add_content_permissions.sql` → `add_content_posts.sql` → `add_activity_records.sql` → (선택) `copy_activities_to_records.sql` → `add_projects.sql` → `add_notes.sql` → `add_portfolio_documents.sql` → (선택) `copy_portfolios_to_documents.sql` → `add_activity_feed.sql`
 
 ### 신규 통합 기능 SQL
-29~33번(앨범 상호작용, 물류 인사이트, 자료실, 커리어 허브, 공지사항)은 2026-11-22에 운영 DB에 적용을 마쳤습니다(1~34번 전부 적용). 35번(`add_library_archive_ext.sql`)은 2026-11-24에 적용을 마쳤습니다. 36번(`add_library_size_50mb.sql`)도 2026-11-24에 적용을 마쳤습니다. **37번(`add_library_zip_mime.sql`)만 운영 미적용**이며 사람이 SQL Editor에서 실행합니다. 이미 적용한 파일은 다시 실행하지 않습니다.
+29~33번(앨범 상호작용, 물류 인사이트, 자료실, 커리어 허브, 공지사항)은 2026-11-22에, 자료실 설정을 바꾸는 35~37번은 2026-11-24에 운영 DB에 적용을 마쳤습니다. **1~37번 전부 적용 상태**이며, 이미 적용한 파일은 다시 실행하지 않습니다.
+
+### 적용 대기: 38번 토론 워크플로 (미적용, 검토 중)
+`add_debate_workflow.sql`은 `feat/debate-workflow` 브랜치에만 있습니다. 새 테이블 7개와, 기존 `agendas`·`opinions`·`decisions`에 **제한 정책 8개**를 더합니다(토론 세션이 있는 안건에서 기존 방식의 쓰기를 막음). 결정 대기 사항 5가지는 `HANDOVER.md` 10-3에 있습니다. 그 브랜치도 이 `INDEX.md`를 고치므로, 병합할 때 내용이 충돌할 수 있습니다(위 "운영 DB 현재 상태"를 기준으로 맞춥니다).
 
 ## 함수를 덮어쓰는 파일(다시 실행하면 최신 내용이 옛 내용으로 바뀝니다)
 
