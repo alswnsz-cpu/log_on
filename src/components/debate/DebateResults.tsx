@@ -1,4 +1,4 @@
-﻿import {
+import {
   calculateDebateResults,
   DEBATE_STANCE_LABEL,
   percentage,

@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   DEBATE_STANCE_LABEL,
   type DebateStance,
@@ -124,7 +124,7 @@ export default function DebatePreOpinion({
               <p className="hint">
                 토론 시작 전까지 다른 부원의 사전 의견은
                 공개되지 않습니다.
-                임원진은 사전 의견을 확인할 수 있습니다.
+                임원진도 토론 시작 전에는 전체 제출 인원수만 확인할 수 있습니다.
                 토론 시작 전까지 자신의 의견을 수정할 수 있습니다.
               </p>
             </div>

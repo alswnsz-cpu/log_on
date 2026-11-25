@@ -1,4 +1,4 @@
-﻿export type DebateStance = 'agree' | 'disagree'
+export type DebateStance = 'agree' | 'disagree'
 
 export type DebateStage =
   | 'pre'

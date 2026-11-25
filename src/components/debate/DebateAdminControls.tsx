@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   DEBATE_STAGE_LABEL,
   type DebateStage,
@@ -60,7 +60,7 @@ export default function DebateAdminControls({
       : 0
 
   const cannotStart =
-    stage === 'pre' && participantCount < 2
+    stage === 'pre' && participantCount < 4
 
   async function finalize(e: FormEvent) {
     e.preventDefault()
@@ -115,7 +115,7 @@ export default function DebateAdminControls({
 
       {cannotStart && (
         <p className="msg error" role="alert">
-          최소 2명의 토론 참여자를 지정해 주세요.
+          최소 4명의 토론 참여자를 지정해 주세요.
         </p>
       )}
 

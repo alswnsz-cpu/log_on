@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import {
   DEBATE_STANCE_LABEL,
   percentage,

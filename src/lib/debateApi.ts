@@ -1,4 +1,4 @@
-﻿import { supabase } from './supabase'
+import { supabase } from './supabase'
 import {
   type DebateStage,
   type DebateStance,
@@ -361,4 +361,41 @@ export async function getDebateVoteCount(
   }
 
   return count
+}
+
+// Officer-only submission counts
+
+export interface DebateSubmissionCounts {
+  preSubmitted: number
+  postSubmitted: number
+}
+
+export async function getDebateSubmissionCounts(
+  agendaId: number,
+): Promise<DebateSubmissionCounts> {
+  const { data, error } = await supabase.rpc(
+    'debate_submission_counts',
+    {
+      p_agenda_id: agendaId,
+    },
+  )
+
+  if (error) throw error
+
+  const preSubmitted = data?.preSubmitted
+  const postSubmitted = data?.postSubmitted
+
+  if (
+    !Number.isSafeInteger(preSubmitted) ||
+    !Number.isSafeInteger(postSubmitted) ||
+    preSubmitted < 0 ||
+    postSubmitted < 0
+  ) {
+    throw new Error('Invalid submission counts')
+  }
+
+  return {
+    preSubmitted,
+    postSubmitted,
+  }
 }

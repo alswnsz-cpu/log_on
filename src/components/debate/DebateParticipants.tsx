@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 
 export interface DebateMember {
   id: string
@@ -8,7 +8,7 @@ export interface DebateMember {
 interface Props {
   members: DebateMember[]
   participantIds: string[]
-  submittedIds: string[]
+  submittedCount: number
   locked: boolean
   busy: boolean
   onToggle: (userId: string, selected: boolean) => Promise<void>
@@ -17,7 +17,7 @@ interface Props {
 export default function DebateParticipants({
   members,
   participantIds,
-  submittedIds,
+  submittedCount,
   locked,
   busy,
   onToggle,
@@ -25,7 +25,6 @@ export default function DebateParticipants({
   const [search, setSearch] = useState('')
 
   const selected = new Set(participantIds)
-  const submitted = new Set(submittedIds)
 
   const shown = members.filter(member =>
     member.name.toLowerCase().includes(search.trim().toLowerCase()),
@@ -51,7 +50,7 @@ export default function DebateParticipants({
 
         <div className="debate-summary-item">
           <span className="hint">사전 의견 제출</span>
-          <strong>{submitted.size}명</strong>
+          <strong>{submittedCount}명</strong>
         </div>
       </div>
 
@@ -68,14 +67,13 @@ export default function DebateParticipants({
 
       {locked && (
         <p className="hint">
-          토론이 시작되어 참여자 명단을 변경할 수 없습니다.
+          사전 의견 제출이 시작되어 참여자 명단을 변경할 수 없습니다.
         </p>
       )}
 
       <div className="debate-member-list">
         {shown.map(member => {
           const checked = selected.has(member.id)
-          const hasSubmitted = submitted.has(member.id)
 
           return (
             <label
@@ -85,7 +83,7 @@ export default function DebateParticipants({
               <input
                 type="checkbox"
                 checked={checked}
-                disabled={locked || busy || hasSubmitted}
+                disabled={locked || busy}
                 onChange={e => {
                   void onToggle(member.id, e.target.checked)
                 }}
@@ -95,9 +93,7 @@ export default function DebateParticipants({
                 {member.name}
               </span>
 
-              {hasSubmitted ? (
-                <span className="badge ok">의견 제출</span>
-              ) : checked ? (
+              {checked ? (
                 <span className="badge ok">참여</span>
               ) : (
                 <span className="hint">미참여</span>
@@ -112,8 +108,8 @@ export default function DebateParticipants({
       </div>
 
       <p className="hint">
-        최소 2명의 참여자를 지정해야 토론을 시작할 수 있습니다.
-        사전 의견을 제출한 부원은 참여자 명단에서 제외할 수 없습니다.
+        최소 4명의 참여자를 지정해야 토론을 시작할 수 있습니다.
+        첫 사전 의견이 제출되면 참여자 명단이 잠깁니다. 제출자별 정보는 공개되지 않습니다.
       </p>
     </section>
   )

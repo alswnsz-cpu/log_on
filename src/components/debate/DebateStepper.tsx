@@ -1,4 +1,4 @@
-﻿import {
+import {
   DEBATE_STAGES,
   DEBATE_STAGE_LABEL,
   type DebateStage,

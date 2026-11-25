@@ -1,4 +1,4 @@
-﻿import {
+import {
   useCallback,
   useEffect,
   useRef,
@@ -22,6 +22,7 @@ import {
   getDebatePostOpinions,
   getDebateHasVoted,
   getDebateVoteCount,
+  getDebateSubmissionCounts,
   getDebateSnapshot,
   getDebateMvpResults,
   setDebateParticipant,
@@ -34,6 +35,7 @@ import {
   cancelDebateAgenda,
   type DebateSession,
   type DebateStats,
+  type DebateSubmissionCounts,
 } from '../../lib/debateApi'
 
 import DebateStepper from './DebateStepper'
@@ -68,6 +70,7 @@ interface WorkflowData {
   postOpinions: PostOpinion[]
   hasVoted: boolean
   voteCount: number | null
+  submissionCounts: DebateSubmissionCounts | null
   votes: MvpResult[]
   summary: string | null
   snapshot?: DebateStats
@@ -124,6 +127,7 @@ export default function DebateWorkflow({
         preOpinions,
         postOpinions,
         hasVoted,
+        submissionCounts,
       ] = await Promise.all([
         getDebateMembers(),
         getDebateParticipants(agendaId),
@@ -132,6 +136,9 @@ export default function DebateWorkflow({
         session.stage === 'voting'
           ? getDebateHasVoted(agendaId)
           : Promise.resolve(false),
+        isOfficer && session.stage !== "closed"
+          ? getDebateSubmissionCounts(agendaId)
+          : Promise.resolve(null),
       ])
 
       const voteCount =
@@ -185,6 +192,7 @@ export default function DebateWorkflow({
         postOpinions,
         hasVoted,
         voteCount,
+        submissionCounts,
         votes,
         summary,
         snapshot,
@@ -327,10 +335,14 @@ export default function DebateWorkflow({
   const myPost =
     postOpinions.find(o => o.user_id === userId) ?? null
 
+  const preSubmitted = data.submissionCounts?.preSubmitted ?? 0
+  const postSubmitted = data.submissionCounts?.postSubmitted ?? 0
+
   const canEdit =
     isOfficer &&
     stage === 'pre' &&
-    preOpinions.length === 0
+    data.submissionCounts !== null &&
+    preSubmitted === 0
 
   async function advance() {
     if (!isOfficer || disabled) return
@@ -338,13 +350,13 @@ export default function DebateWorkflow({
     const messages = {
       pre:
         '토론을 시작할까요? 미제출 인원: ' +
-        Math.max(0, participantIds.length - preOpinions.length) +
+        Math.max(0, participantIds.length - preSubmitted) +
         '명. 이후 참여자와 사전 의견을 수정할 수 없습니다.',
       discussing:
         '토론을 마치고 최종 의견 제출을 시작할까요?',
       post:
         'MVP 투표를 시작할까요? 미제출 인원: ' +
-        Math.max(0, participantIds.length - postOpinions.length) +
+        Math.max(0, participantIds.length - postSubmitted) +
         '명. 이후 최종 의견을 수정할 수 없습니다.',
     }
 
@@ -542,8 +554,8 @@ export default function DebateWorkflow({
         <DebateAdminControls
           stage={stage}
           participantCount={participantIds.length}
-          preSubmitted={preOpinions.length}
-          postSubmitted={postOpinions.length}
+          preSubmitted={preSubmitted}
+          postSubmitted={postSubmitted}
           voteCount={data.voteCount}
           busy={disabled}
           onAdvance={advance}
@@ -555,8 +567,8 @@ export default function DebateWorkflow({
         <DebateParticipants
           members={members}
           participantIds={participantIds}
-          submittedIds={preOpinions.map(o => o.user_id)}
-          locked={false}
+          submittedCount={preSubmitted}
+          locked={preSubmitted > 0 || data.submissionCounts === null}
           busy={disabled}
           onToggle={(id, selected) =>
             run(
@@ -581,7 +593,17 @@ export default function DebateWorkflow({
         </section>
       )}
 
-      {eligible && stage === 'pre' && (
+      {eligible && stage === 'pre' && participantIds.length < 4 && (
+        <section className="card">
+          <h3>사전 의견 등록 대기</h3>
+          <p>
+            참여자가 최소 4명 이상 지정되어야 사전 의견을 제출할 수 있습니다.
+          </p>
+          <p>현재 지정 인원: {participantIds.length} / 최소 4명</p>
+        </section>
+      )}
+
+      {eligible && stage === 'pre' && participantIds.length >= 4 && (
         <DebatePreOpinion
           key={`${agendaId}-${userId}-pre`}
           opinion={myPre}

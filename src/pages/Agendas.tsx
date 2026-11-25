@@ -1,4 +1,4 @@
-﻿import { createDebateAgenda, getDebateSessions } from '../lib/debateApi'
+import { createDebateAgenda, getDebateSessions } from '../lib/debateApi'
 import { DEBATE_STAGES, DEBATE_STAGE_LABEL, type DebateStage } from '../lib/debateWorkflow'
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'

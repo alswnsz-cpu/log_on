@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { MVP_CRITERIA } from '../../lib/debateWorkflow'
 import type { DebateMember } from './DebateParticipants'
 

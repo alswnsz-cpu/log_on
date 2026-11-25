@@ -1,4 +1,4 @@
-﻿import DebateWorkflow from '../components/debate/DebateWorkflow'
+import DebateWorkflow from '../components/debate/DebateWorkflow'
 import { getDebateSession } from '../lib/debateApi'
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react'

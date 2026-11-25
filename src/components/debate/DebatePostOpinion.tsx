@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   DEBATE_STANCE_LABEL,
   type DebateStance,
@@ -229,8 +229,8 @@ export default function DebatePostOpinion({
                 최종 의견을 수정할 수 있습니다.
                 제출한 의견은 토론 전후 입장 변화와
                 최종 결과 분석에 활용됩니다.
-                임원진은 제출된 의견을 확인할 수 있으며,
-                일반 부원에게는 토론 종료 후 공개됩니다.
+                임원진은 전체 제출 인원수만 확인할 수 있으며,
+                개별 의견은 모든 승인 부원에게 토론 종료 후 공개됩니다.
               </p>
             </div>
 

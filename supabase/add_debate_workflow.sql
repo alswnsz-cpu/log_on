@@ -1,7 +1,14 @@
-﻿-- LOG:ON 단계별 토론 시스템
+-- LOG:ON 단계별 토론 시스템
 -- 신규 토론의 참여자 지정, 사전 입장, 토론 진행,
 -- 사후 입장 및 결론, MVP 투표, 최종 통계를 지원한다.
--- 기존 토론 기록은 변경하지 않는다.
+-- 신규 테이블 7개를 추가한다.
+-- 기존 테이블 agendas, opinions, decisions에 제한 정책 8개를 추가한다.
+-- 세션이 있는 안건에서는 기존 방식의 수정 및 의견·결론 등록을 차단한다.
+-- 기존 테이블의 컬럼, 제약 조건, 기존 데이터는 변경하거나 이전하지 않는다.
+-- 세션이 없는 기존 안건은 기존 토론 방식을 유지한다.
+-- 신규 토론은 찬성·반대만 지원하며 보류 및 종료 후 다시 논의하기는 지원하지 않는다.
+-- 임원진도 의견 공개 전에는 타인의 의견을 열람할 수 없으며 제출 인원수만 확인한다.
+-- 토론 시작에는 최소 4명의 참여자가 필요하다.
 -- 기존 개인 메모 및 회원 관리 정책을 유지한다.
 -- 실행 전 반드시 백업 및 시험용 DB 검증을 진행한다.
 -- 실행 순서: SQL 적용 후 프론트엔드 배포.
@@ -119,7 +126,6 @@ using (
   public.is_approved()
   and (
     user_id = auth.uid()
-    or public.is_officer()
     or exists (
       select 1 from public.debate_sessions s
       where s.agenda_id = debate_pre_opinions.agenda_id
@@ -135,7 +141,6 @@ using (
   public.is_approved()
   and (
     user_id = auth.uid()
-    or public.is_officer()
     or exists (
       select 1 from public.debate_sessions s
       where s.agenda_id = debate_post_opinions.agenda_id
@@ -182,6 +187,14 @@ begin
     and user_id = auth.uid()
   ) then
     raise exception 'Not a participant';
+  end if;
+
+  if (
+    select count(*)
+    from public.debate_participants
+    where agenda_id = p_agenda_id
+  ) < 4 then
+    raise exception 'At least 4 participants are required before pre-debate submission';
   end if;
 
   insert into public.debate_pre_opinions
@@ -328,6 +341,13 @@ begin
     raise exception 'Participant list is locked';
   end if;
 
+  if exists (
+    select 1 from public.debate_pre_opinions
+    where agenda_id = p_agenda_id
+  ) then
+    raise exception 'Participant list is locked';
+  end if;
+
   if not exists (
     select 1 from public.profiles
     where id = p_user_id
@@ -373,9 +393,8 @@ begin
   if exists (
     select 1 from public.debate_pre_opinions
     where agenda_id = p_agenda_id
-    and user_id = p_user_id
   ) then
-    raise exception 'Participant has already submitted an opinion';
+    raise exception 'Participant list is locked';
   end if;
 
   delete from public.debate_participants
@@ -431,8 +450,8 @@ begin
     select count(*)
     from public.debate_participants
     where agenda_id = p_agenda_id
-  ) < 2 then
-    raise exception 'At least two participants are required';
+  ) < 4 then
+    raise exception 'At least four participants are required';
   end if;
 
   update public.debate_sessions
@@ -1294,6 +1313,55 @@ from public, anon, authenticated;
 grant execute on function public.debate_vote_count(bigint)
 to authenticated;
 
+-- Officer-only submission counts.
+-- No opinion contents, stances or submitter identities.
+
+create function public.debate_submission_counts(
+  p_agenda_id bigint
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if public.is_approved() is not true
+     or public.is_officer() is not true then
+    raise exception 'Officer permission required';
+  end if;
+
+  if not exists (
+    select 1
+    from public.debate_sessions
+    where agenda_id = p_agenda_id
+  ) then
+    raise exception 'Debate session not found';
+  end if;
+
+  return jsonb_build_object(
+    'preSubmitted', (
+      select count(*)
+      from public.debate_pre_opinions
+      where agenda_id = p_agenda_id
+    ),
+    'postSubmitted', (
+      select count(*)
+      from public.debate_post_opinions
+      where agenda_id = p_agenda_id
+    )
+  );
+end;
+$$;
+
+revoke all on function
+  public.debate_submission_counts(bigint)
+from public, anon, authenticated;
+
+grant execute on function
+  public.debate_submission_counts(bigint)
+to authenticated;
+
 commit;
 
 -- ============================================================
@@ -1328,6 +1396,7 @@ commit;
 -- drop function if exists public.debate_submit_vote(bigint, uuid);
 -- drop function if exists public.debate_has_voted(bigint);
 -- drop function if exists public.debate_vote_count(bigint);
+-- drop function if exists public.debate_submission_counts(bigint);
 -- drop function if exists public.debate_mvp_results(bigint);
 -- drop function if exists public.debate_finalize(bigint, text);
 -- drop function if exists public.debate_create_agenda(text, text);
