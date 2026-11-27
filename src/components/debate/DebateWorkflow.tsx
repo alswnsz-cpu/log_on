@@ -16,6 +16,8 @@ import {
 
 import {
   getDebateSession,
+  getDebateSessionState,
+  type DebateSessionState,
   getDebateMembers,
   getDebateParticipants,
   getDebatePreOpinions,
@@ -26,6 +28,7 @@ import {
   getDebateSnapshot,
   getDebateMvpResults,
   setDebateParticipant,
+  confirmDebateParticipants,
   submitDebatePreOpinion,
   submitDebatePostOpinion,
   submitDebateVote,
@@ -101,6 +104,8 @@ export default function DebateWorkflow({
   const mounted = useRef(false)
   const running = useRef(false)
   const requestId = useRef(0)
+  const loadedSession = useRef<DebateSessionState | null>(null)
+  const lastFullRefresh = useRef(0)
 
   const load = useCallback(async () => {
     const currentRequest = ++requestId.current
@@ -172,9 +177,14 @@ export default function DebateWorkflow({
         summary = decision.data.content
       }
 
-      const latest = await getDebateSession(agendaId)
+      const latest = await getDebateSessionState(agendaId)
 
-      if (!latest || latest.stage !== session.stage) {
+      if (
+        !latest ||
+        latest.stage !== session.stage ||
+        latest.updated_at !== session.updated_at ||
+        latest.participants_confirmed_at !== session.participants_confirmed_at
+      ) {
         throw new Error('Debate stage changed during loading')
       }
 
@@ -182,6 +192,9 @@ export default function DebateWorkflow({
         !mounted.current ||
         currentRequest !== requestId.current
       ) return
+
+      loadedSession.current = latest
+      lastFullRefresh.current = Date.now()
 
       setData({
         agenda: agendaResult.data as Agenda,
@@ -201,6 +214,10 @@ export default function DebateWorkflow({
       setLoadError(null)
     } catch (err) {
       console.error('Debate loading failed:', err)
+
+      if (mounted.current && currentRequest === requestId.current) {
+        lastFullRefresh.current = 0
+      }
 
       if (
         mounted.current &&
@@ -222,31 +239,139 @@ export default function DebateWorkflow({
 
   useEffect(() => {
     mounted.current = true
+    loadedSession.current = null
+    lastFullRefresh.current = 0
 
     let stopped = false
-    let timer: ReturnType<typeof setTimeout>
+    let refreshing = false
+    let refreshOnReturn = false
+    let timer: ReturnType<typeof setTimeout> | undefined
 
-    async function refresh() {
-      if (!running.current) {
-        await load()
-      }
-
-      if (!stopped) {
-        timer = setTimeout(refresh, 5000)
+    function clearTimer() {
+      if (timer !== undefined) {
+        clearTimeout(timer)
+        timer = undefined
       }
     }
 
-    void refresh()
+    function schedule() {
+      clearTimer()
+
+      if (
+        !stopped &&
+        document.visibilityState === 'visible' &&
+        loadedSession.current?.stage !== 'closed'
+      ) {
+        timer = setTimeout(() => void refresh(), 5000)
+      }
+    }
+
+    async function refresh(force = false) {
+      if (
+        stopped ||
+        document.visibilityState !== 'visible' ||
+        loadedSession.current?.stage === 'closed'
+      ) return
+
+      if (force) refreshOnReturn = true
+
+      if (refreshing || running.current) {
+        schedule()
+        return
+      }
+
+      clearTimer()
+      refreshing = true
+
+      const currentRequest = requestId.current
+
+      try {
+        const previous = loadedSession.current
+
+        if (
+          refreshOnReturn ||
+          !previous ||
+          Date.now() - lastFullRefresh.current >= 30000
+        ) {
+          refreshOnReturn = false
+          await load()
+        } else {
+          const latest = await getDebateSessionState(agendaId)
+
+          if (
+            stopped ||
+            running.current ||
+            currentRequest !== requestId.current ||
+            document.visibilityState !== 'visible'
+          ) return
+
+          if (
+            !latest ||
+            latest.stage !== previous.stage ||
+            latest.updated_at !== previous.updated_at ||
+            latest.participants_confirmed_at !==
+              previous.participants_confirmed_at
+          ) {
+            await load()
+          }
+        }
+      } catch (err) {
+        console.error('Debate polling failed:', err)
+
+        if (
+          !stopped &&
+          mounted.current &&
+          currentRequest === requestId.current
+        ) {
+          lastFullRefresh.current = 0
+          setLoadError(
+            '토론 정보를 갱신하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          )
+        }
+      } finally {
+        refreshing = false
+
+        if (
+          refreshOnReturn &&
+          !stopped &&
+          !running.current &&
+          document.visibilityState === 'visible'
+        ) {
+          void refresh(true)
+        } else {
+          schedule()
+        }
+      }
+    }
+
+    function onVisibilityChange() {
+      clearTimer()
+
+      if (document.visibilityState === 'visible') {
+        void refresh(true)
+      }
+    }
+
+    document.addEventListener(
+      'visibilitychange',
+      onVisibilityChange,
+    )
+
+    void refresh(true)
 
     return () => {
       stopped = true
       mounted.current = false
-      // Invalidate pending requests during cleanup.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       requestId.current++
-      clearTimeout(timer)
+      clearTimer()
+
+      document.removeEventListener(
+        'visibilitychange',
+        onVisibilityChange,
+      )
     }
-  }, [load])
+  }, [agendaId, load])
 
   async function run(
     action: () => Promise<unknown>,
@@ -316,7 +441,7 @@ export default function DebateWorkflow({
     agenda,
     session,
     members,
-    participantIds,
+    participantIds: registeredParticipantIds,
     preOpinions,
     postOpinions,
     hasVoted,
@@ -326,8 +451,16 @@ export default function DebateWorkflow({
   } = data
 
   const stage = session.stage
+  const confirmed = Boolean(session.participants_confirmed_at)
+  const approvedIds = new Set(members.map(member => member.id))
+  const participantIds = stage === 'closed'
+    ? registeredParticipantIds
+    : registeredParticipantIds.filter(id => approvedIds.has(id))
   const eligible = participantIds.includes(userId)
-  const disabled = busy || Boolean(loadError)
+  const disabled =
+    busy ||
+    Boolean(loadError) ||
+    (isOfficer && stage !== 'closed' && data.submissionCounts === null)
 
   const myPre =
     preOpinions.find(o => o.user_id === userId) ?? null
@@ -344,8 +477,34 @@ export default function DebateWorkflow({
     data.submissionCounts !== null &&
     preSubmitted === 0
 
+  async function confirmParticipants() {
+    if (
+      !isOfficer ||
+      disabled ||
+      stage !== 'pre' ||
+      confirmed ||
+      participantIds.length < 4
+    ) return
+
+    const ok = await dialog.confirm({
+      title: '토론 참여자 확정',
+      message:
+        '현재 승인된 참여자 ' + participantIds.length +
+        '명을 확정할까요? 확정 이후에는 명단을 변경할 수 없으며 사전 의견 제출이 시작됩니다.',
+      confirmLabel: '참여자 확정',
+    })
+
+    if (!ok) return
+
+    await run(
+      () => confirmDebateParticipants(agendaId),
+      '참여자 명단이 확정되었습니다.',
+    )
+  }
+
   async function advance() {
     if (!isOfficer || disabled) return
+    if (stage === 'pre' && (!confirmed || participantIds.length < 4)) return
 
     const messages = {
       pre:
@@ -553,6 +712,7 @@ export default function DebateWorkflow({
       {isOfficer && stage !== 'closed' && (
         <DebateAdminControls
           stage={stage}
+          confirmed={confirmed}
           participantCount={participantIds.length}
           preSubmitted={preSubmitted}
           postSubmitted={postSubmitted}
@@ -568,7 +728,9 @@ export default function DebateWorkflow({
           members={members}
           participantIds={participantIds}
           submittedCount={preSubmitted}
-          locked={preSubmitted > 0 || data.submissionCounts === null}
+          confirmed={confirmed}
+          locked={confirmed || data.submissionCounts === null}
+          onConfirm={confirmParticipants}
           busy={disabled}
           onToggle={(id, selected) =>
             run(
@@ -593,17 +755,19 @@ export default function DebateWorkflow({
         </section>
       )}
 
-      {eligible && stage === 'pre' && participantIds.length < 4 && (
+      {eligible && stage === 'pre' && (!confirmed || participantIds.length < 4) && (
         <section className="card">
           <h3>사전 의견 등록 대기</h3>
           <p>
-            참여자가 최소 4명 이상 지정되어야 사전 의견을 제출할 수 있습니다.
+            {!confirmed
+              ? '임원진이 참여자 명단을 확정하면 사전 의견을 제출할 수 있습니다.'
+              : '승인된 참여자가 4명 미만입니다. 임원진에게 문의해 주세요.'}
           </p>
-          <p>현재 지정 인원: {participantIds.length} / 최소 4명</p>
+          <p>현재 승인 인원: {participantIds.length} / 최소 4명</p>
         </section>
       )}
 
-      {eligible && stage === 'pre' && participantIds.length >= 4 && (
+      {eligible && stage === 'pre' && confirmed && participantIds.length >= 4 && (
         <DebatePreOpinion
           key={`${agendaId}-${userId}-pre`}
           opinion={myPre}
@@ -624,7 +788,7 @@ export default function DebateWorkflow({
 
       {(stage === 'discussing' || stage === 'post') && (
         <DebateDiscussion
-          opinions={preOpinions}
+          opinions={preOpinions.filter(o => participantIds.includes(o.user_id))}
           members={members}
           participantCount={participantIds.length}
         />

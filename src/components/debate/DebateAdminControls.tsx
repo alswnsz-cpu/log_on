@@ -6,6 +6,7 @@ import {
 
 interface Props {
   stage: DebateStage
+  confirmed: boolean
   participantCount: number
   preSubmitted: number
   postSubmitted: number
@@ -25,7 +26,7 @@ const NEXT_ACTION: Record<
 }
 
 const GUIDE: Record<DebateStage, string> = {
-  pre: '토론을 시작하면 참여자 명단과 사전 의견을 수정할 수 없습니다.',
+  pre: '참여자 명단을 확정한 후 사전 의견을 수집합니다. 토론 시작 이후에는 사전 의견을 수정할 수 없습니다.',
   discussing: '토론을 마치고 참여자의 최종 입장과 결론을 수집합니다.',
   post: '사후 의견 제출을 마감하고 MVP 투표를 시작합니다.',
   voting: '토론을 종료하면 최종 통계와 MVP 결과가 공개됩니다.',
@@ -34,6 +35,7 @@ const GUIDE: Record<DebateStage, string> = {
 
 export default function DebateAdminControls({
   stage,
+  confirmed,
   participantCount,
   preSubmitted,
   postSubmitted,
@@ -60,7 +62,7 @@ export default function DebateAdminControls({
       : 0
 
   const cannotStart =
-    stage === 'pre' && participantCount < 4
+    stage === 'pre' && (!confirmed || participantCount < 4)
 
   async function finalize(e: FormEvent) {
     e.preventDefault()
@@ -115,11 +117,13 @@ export default function DebateAdminControls({
 
       {cannotStart && (
         <p className="msg error" role="alert">
-          최소 4명의 토론 참여자를 지정해 주세요.
+          {participantCount < 4
+            ? '승인된 토론 참여자가 최소 4명 이상이어야 합니다.'
+            : '참여자 명단을 먼저 확정해 주세요.'}
         </p>
       )}
 
-      {stage === 'pre' && preMissing > 0 && (
+      {stage === 'pre' && confirmed && preMissing > 0 && (
         <div className="debate-admin-warning">
           사전 의견 미제출 인원: {preMissing}명
           <p>

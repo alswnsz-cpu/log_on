@@ -1,4 +1,9 @@
-import { createDebateAgenda, getDebateSessions } from '../lib/debateApi'
+import {
+  createDebateAgenda,
+  getDebateSessions,
+  getDebateListState,
+  type DebateListState,
+} from '../lib/debateApi'
 import { DEBATE_STAGES, DEBATE_STAGE_LABEL, type DebateStage } from '../lib/debateWorkflow'
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -34,6 +39,12 @@ export default function Agendas() {
   const isOfficer = profile?.role === 'officer'
   const [stages, setStages] = useState<Record<number, DebateStage>>({})
   const requestId = useRef(0)
+  const loadedSessions = useRef<DebateListState[] | null>(null)
+  const lastFullRefresh = useRef(0)
+  const activeLoads = useRef(0)
+  const realtimeRevision = useRef(0)
+  const loadedRevision = useRef(-1)
+  const polling = useRef(false)
   const [agendas, setAgendas] = useState<Agenda[]>([])
   const [counts, setCounts] = useState<Record<number, StanceCounts>>({})
   const [loading, setLoading] = useState(true)
@@ -54,6 +65,8 @@ export default function Agendas() {
 
   const load = useCallback(async () => {
     const currentRequest = ++requestId.current
+    activeLoads.current++
+    const revisionAtStart = realtimeRevision.current
 
     try {
       const [a, o, sessions] = await Promise.all([
@@ -74,6 +87,17 @@ export default function Agendas() {
         grouped[row.agenda_id].push(row.stance)
       }
 
+      loadedSessions.current = sessions
+        .map(s => ({
+          agenda_id: s.agenda_id,
+          stage: s.stage,
+          updated_at: s.updated_at,
+        }))
+        .sort((a, b) => a.agenda_id - b.agenda_id)
+
+      lastFullRefresh.current = Date.now()
+      loadedRevision.current = revisionAtStart
+
       setAgendas(a.data as Agenda[])
       setCounts(Object.fromEntries(Object.entries(grouped).map(([id, s]) => [id, countStances(s)])))
       setStages(Object.fromEntries(sessions.map(s => [s.agenda_id, s.stage])))
@@ -82,31 +106,159 @@ export default function Agendas() {
       console.error('Debate list loading failed:', err)
 
       if (currentRequest === requestId.current) {
+        lastFullRefresh.current = 0
         setLoadError('토론을 불러오지 못했습니다.')
       }
     } finally {
+      activeLoads.current--
+
       if (currentRequest === requestId.current) {
         setLoading(false)
       }
     }
   }, [])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load()
+  const refreshFromRealtime = useCallback(() => {
+    realtimeRevision.current++
+    lastFullRefresh.current = 0
+
+    if (
+      document.visibilityState === 'visible' &&
+      activeLoads.current === 0 &&
+      !polling.current
+    ) {
+      void load()
+    }
   }, [load])
-  useRealtimeRefresh('agendas-list', load)
+
+  useRealtimeRefresh('agendas-list', refreshFromRealtime)
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      void load()
-    }, 5000)
+    let stopped = false
+    let refreshing = false
+    let forceRefresh = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    function clearTimer() {
+      if (timer !== undefined) {
+        clearTimeout(timer)
+        timer = undefined
+      }
+    }
+
+    function schedule() {
+      clearTimer()
+
+      if (!stopped && document.visibilityState === 'visible') {
+        timer = setTimeout(() => void refresh(), 5000)
+      }
+    }
+
+    async function refresh(force = false) {
+      if (stopped || document.visibilityState !== 'visible') return
+
+      if (force) forceRefresh = true
+
+      if (refreshing || activeLoads.current > 0) {
+        schedule()
+        return
+      }
+
+      clearTimer()
+      refreshing = true
+      polling.current = true
+
+      const currentRequest = requestId.current
+
+      try {
+        const previous = loadedSessions.current
+
+        if (
+          forceRefresh ||
+          !previous ||
+          loadedRevision.current !== realtimeRevision.current ||
+          Date.now() - lastFullRefresh.current >= 30000
+        ) {
+          forceRefresh = false
+          await load()
+        } else {
+          const latest = await getDebateListState()
+
+          if (
+            stopped ||
+            activeLoads.current > 0 ||
+            currentRequest !== requestId.current ||
+            document.visibilityState !== 'visible'
+          ) return
+
+          const changed =
+            latest.length !== previous.length ||
+            latest.some((session, index) => {
+              const old = previous[index]
+
+              return (
+                !old ||
+                session.agenda_id !== old.agenda_id ||
+                session.stage !== old.stage ||
+                session.updated_at !== old.updated_at
+              )
+            })
+
+          if (
+            changed ||
+            loadedRevision.current !== realtimeRevision.current
+          ) await load()
+        }
+      } catch (err) {
+        console.error('Debate list polling failed:', err)
+
+        if (!stopped && currentRequest === requestId.current) {
+          lastFullRefresh.current = 0
+          setLoadError('토론 목록을 갱신하지 못했습니다.')
+        }
+      } finally {
+        refreshing = false
+        polling.current = false
+
+        if (
+          forceRefresh &&
+          !stopped &&
+          activeLoads.current === 0 &&
+          document.visibilityState === 'visible'
+        ) {
+          void refresh()
+        } else {
+          schedule()
+        }
+      }
+    }
+
+    function onVisibilityChange() {
+      clearTimer()
+
+      if (document.visibilityState === 'visible') {
+        void refresh(true)
+      }
+    }
+
+    document.addEventListener(
+      'visibilitychange',
+      onVisibilityChange,
+    )
+
+    void refresh(true)
 
     return () => {
-      window.clearInterval(timer)
-      // Invalidate pending requests during cleanup.
+      stopped = true
+      clearTimer()
+
       // eslint-disable-next-line react-hooks/exhaustive-deps
       requestId.current++
+
+      document.removeEventListener(
+        'visibilitychange',
+        onVisibilityChange,
+      )
     }
   }, [load])
 

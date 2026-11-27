@@ -15,6 +15,7 @@ export interface DebateSession {
   stage: DebateStage
   created_at: string
   updated_at: string
+  participants_confirmed_at: string | null
   closed_at: string | null
 }
 
@@ -57,6 +58,42 @@ Promise<DebateSession[]> {
   if (error) throw error
 
   return (data ?? []) as DebateSession[]
+}
+
+export type DebateSessionState = Pick<
+  DebateSession,
+  'stage' | 'updated_at' | 'participants_confirmed_at'
+>
+
+export async function getDebateSessionState(
+  agendaId: number,
+): Promise<DebateSessionState | null> {
+  const { data, error } = await supabase
+    .from('debate_sessions')
+    .select('stage, updated_at, participants_confirmed_at')
+    .eq('agenda_id', agendaId)
+    .maybeSingle()
+
+  if (error) throw error
+
+  return data as DebateSessionState | null
+}
+
+export type DebateListState = Pick<
+  DebateSession,
+  'agenda_id' | 'stage' | 'updated_at'
+>
+
+export async function getDebateListState():
+Promise<DebateListState[]> {
+  const { data, error } = await supabase
+    .from('debate_sessions')
+    .select('agenda_id, stage, updated_at')
+    .order('agenda_id')
+
+  if (error) throw error
+
+  return (data ?? []) as DebateListState[]
 }
 
 // Members and participants
@@ -239,6 +276,19 @@ export async function setDebateParticipant(
     {
       p_agenda_id: agendaId,
       p_user_id: userId,
+    },
+  )
+
+  if (error) throw error
+}
+
+export async function confirmDebateParticipants(
+  agendaId: number,
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    'debate_confirm_participants',
+    {
+      p_agenda_id: agendaId,
     },
   )
 

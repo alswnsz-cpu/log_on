@@ -2402,6 +2402,94 @@ a.feed-title:hover {
 }
 
 
+/* Debate workflow: form layout fixes */
+
+.debate-workflow .form {
+  min-width: 0;
+}
+
+.form label.debate-stance-option,
+.form label.debate-candidate-row {
+  display: flex;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.form label.debate-stance-option {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.form label.debate-stance-option.agree {
+  color: var(--ok, #32976d);
+}
+
+.form label.debate-stance-option.disagree {
+  color: var(--danger, #d05b5b);
+}
+
+.form label.debate-candidate-row {
+  align-items: center;
+  gap: 14px;
+}
+
+.form label.debate-stance-option input[type="radio"],
+.form label.debate-candidate-row input[type="radio"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+}
+
+.form label.debate-candidate-row .debate-member-name {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.debate-mvp-criterion {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.debate-vote-confirm {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .debate-stance-grid {
+    gap: 8px;
+  }
+
+  .form label.debate-stance-option {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .form label.debate-candidate-row {
+    gap: 10px;
+  }
+
+  .debate-candidate-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .debate-vote-confirm {
+    padding: 12px;
+  }
+
+  .debate-vote-confirm .actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+
 /* Debate workflow: final results report */
 
 .debate-result-section {

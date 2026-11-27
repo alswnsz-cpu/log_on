@@ -9,7 +9,9 @@ interface Props {
   members: DebateMember[]
   participantIds: string[]
   submittedCount: number
+  confirmed: boolean
   locked: boolean
+  onConfirm: () => Promise<void>
   busy: boolean
   onToggle: (userId: string, selected: boolean) => Promise<void>
 }
@@ -18,13 +20,18 @@ export default function DebateParticipants({
   members,
   participantIds,
   submittedCount,
+  confirmed,
   locked,
+  onConfirm,
   busy,
   onToggle,
 }: Props) {
   const [search, setSearch] = useState('')
 
-  const selected = new Set(participantIds)
+  const approvedIds = new Set(members.map(member => member.id))
+  const selected = new Set(
+    participantIds.filter(id => approvedIds.has(id)),
+  )
 
   const shown = members.filter(member =>
     member.name.toLowerCase().includes(search.trim().toLowerCase()),
@@ -65,11 +72,16 @@ export default function DebateParticipants({
         </label>
       </div>
 
-      {locked && (
+      <div className="debate-info-box">
+        <strong>
+          {confirmed ? '참여자 확정 완료' : '참여자 확정 대기'}
+        </strong>
         <p className="hint">
-          사전 의견 제출이 시작되어 참여자 명단을 변경할 수 없습니다.
+          {confirmed
+            ? '참여자 명단이 확정되어 변경할 수 없습니다.'
+            : '임원진이 참여자를 확정하면 사전 의견 제출이 시작됩니다.'}
         </p>
-      )}
+      </div>
 
       <div className="debate-member-list">
         {shown.map(member => {
@@ -108,9 +120,31 @@ export default function DebateParticipants({
       </div>
 
       <p className="hint">
-        최소 4명의 참여자를 지정해야 토론을 시작할 수 있습니다.
-        첫 사전 의견이 제출되면 참여자 명단이 잠깁니다. 제출자별 정보는 공개되지 않습니다.
+        승인된 참여자가 최소 4명 이상이어야 명단을 확정할 수 있습니다.
+        확정 이후에는 명단을 변경할 수 없습니다.
+        제출자별 정보는 공개되지 않습니다.
       </p>
+
+      {selected.size < 4 && (
+        <p className="msg error" role="alert">
+          승인된 참여자가 4명 미만입니다.
+        </p>
+      )}
+
+      <div className="actions">
+        <button
+          type="button"
+          className="btn"
+          disabled={confirmed || locked || busy || selected.size < 4}
+          onClick={() => void onConfirm()}
+        >
+          {confirmed
+            ? '참여자 확정 완료'
+            : busy
+              ? '처리 중...'
+              : '참여자 확정'}
+        </button>
+      </div>
     </section>
   )
 }

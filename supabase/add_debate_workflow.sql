@@ -24,6 +24,7 @@ create table public.debate_sessions (
     check (stage in ('pre', 'discussing', 'post', 'voting', 'closed')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  participants_confirmed_at timestamptz,
   closed_at timestamptz
 );
 
@@ -167,18 +168,23 @@ set search_path = ''
 as $$
 declare
   v_stage text;
+  v_confirmed_at timestamptz;
 begin
   if public.is_approved() is not true then
     raise exception 'Access denied';
   end if;
 
-  select stage into v_stage
+  select stage, participants_confirmed_at into v_stage, v_confirmed_at
   from public.debate_sessions
   where agenda_id = p_agenda_id
   for update;
 
   if v_stage is distinct from 'pre' then
     raise exception 'Pre-debate submission is closed';
+  end if;
+
+  if v_confirmed_at is null then
+    raise exception 'Participant list has not been confirmed';
   end if;
 
   if not exists (
@@ -191,8 +197,10 @@ begin
 
   if (
     select count(*)
-    from public.debate_participants
-    where agenda_id = p_agenda_id
+    from public.debate_participants dp
+    join public.profiles p on p.id = dp.user_id
+    where dp.agenda_id = p_agenda_id
+      and p.status = 'approved'
   ) < 4 then
     raise exception 'At least 4 participants are required before pre-debate submission';
   end if;
@@ -326,13 +334,14 @@ set search_path = ''
 as $$
 declare
   v_stage text;
+  v_confirmed_at timestamptz;
 begin
   if public.is_approved() is not true
      or public.is_officer() is not true then
     raise exception 'Access denied';
   end if;
 
-  select stage into v_stage
+  select stage, participants_confirmed_at into v_stage, v_confirmed_at
   from public.debate_sessions
   where agenda_id = p_agenda_id
   for update;
@@ -341,10 +350,7 @@ begin
     raise exception 'Participant list is locked';
   end if;
 
-  if exists (
-    select 1 from public.debate_pre_opinions
-    where agenda_id = p_agenda_id
-  ) then
+  if v_confirmed_at is not null then
     raise exception 'Participant list is locked';
   end if;
 
@@ -361,6 +367,12 @@ begin
   values
     (p_agenda_id, p_user_id)
   on conflict do nothing;
+
+  if found then
+    update public.debate_sessions
+    set updated_at = clock_timestamp()
+    where agenda_id = p_agenda_id;
+  end if;
 end;
 $$;
 
@@ -375,13 +387,14 @@ set search_path = ''
 as $$
 declare
   v_stage text;
+  v_confirmed_at timestamptz;
 begin
   if public.is_approved() is not true
      or public.is_officer() is not true then
     raise exception 'Access denied';
   end if;
 
-  select stage into v_stage
+  select stage, participants_confirmed_at into v_stage, v_confirmed_at
   from public.debate_sessions
   where agenda_id = p_agenda_id
   for update;
@@ -390,16 +403,19 @@ begin
     raise exception 'Participant list is locked';
   end if;
 
-  if exists (
-    select 1 from public.debate_pre_opinions
-    where agenda_id = p_agenda_id
-  ) then
+  if v_confirmed_at is not null then
     raise exception 'Participant list is locked';
   end if;
 
   delete from public.debate_participants
   where agenda_id = p_agenda_id
   and user_id = p_user_id;
+
+  if found then
+    update public.debate_sessions
+    set updated_at = clock_timestamp()
+    where agenda_id = p_agenda_id;
+  end if;
 end;
 $$;
 
@@ -414,6 +430,7 @@ set search_path = ''
 as $$
 declare
   v_stage text;
+  v_confirmed_at timestamptz;
   v_next text;
 begin
   if public.is_approved() is not true
@@ -421,7 +438,7 @@ begin
     raise exception 'Access denied';
   end if;
 
-  select stage into v_stage
+  select stage, participants_confirmed_at into v_stage, v_confirmed_at
   from public.debate_sessions
   where agenda_id = p_agenda_id
   for update;
@@ -446,10 +463,16 @@ begin
     raise exception 'Use finalize to close the debate';
   end if;
 
+  if v_stage = 'pre' and v_confirmed_at is null then
+    raise exception 'Participant list has not been confirmed';
+  end if;
+
   if v_stage = 'pre' and (
     select count(*)
-    from public.debate_participants
-    where agenda_id = p_agenda_id
+    from public.debate_participants dp
+    join public.profiles p on p.id = dp.user_id
+    where dp.agenda_id = p_agenda_id
+      and p.status = 'approved'
   ) < 4 then
     raise exception 'At least four participants are required';
   end if;
@@ -986,6 +1009,10 @@ begin
 
       from public.debate_participants p
 
+      join public.profiles member
+        on member.id = p.user_id
+       and member.status = 'approved'
+
       left join public.debate_pre_opinions pre
         on pre.agenda_id = p.agenda_id
        and pre.user_id = p.user_id
@@ -1076,7 +1103,13 @@ begin
       count(*)
 
     from public.debate_mvp_votes v
+    join public.profiles voter
+      on voter.id = v.voter_id
+    join public.profiles candidate
+      on candidate.id = v.candidate_id
     where v.agenda_id = new.agenda_id
+      and voter.status = 'approved'
+      and candidate.status = 'approved'
     group by v.candidate_id;
 
   end if;
@@ -1302,7 +1335,13 @@ begin
   return (
     select count(*)
     from public.debate_mvp_votes v
+    join public.profiles voter
+      on voter.id = v.voter_id
+    join public.profiles candidate
+      on candidate.id = v.candidate_id
     where v.agenda_id = p_agenda_id
+      and voter.status = 'approved'
+      and candidate.status = 'approved'
   );
 end;
 $$;
@@ -1342,13 +1381,17 @@ begin
   return jsonb_build_object(
     'preSubmitted', (
       select count(*)
-      from public.debate_pre_opinions
-      where agenda_id = p_agenda_id
+      from public.debate_pre_opinions o
+      join public.profiles p on p.id = o.user_id
+      where o.agenda_id = p_agenda_id
+        and p.status = 'approved'
     ),
     'postSubmitted', (
       select count(*)
-      from public.debate_post_opinions
-      where agenda_id = p_agenda_id
+      from public.debate_post_opinions o
+      join public.profiles p on p.id = o.user_id
+      where o.agenda_id = p_agenda_id
+        and p.status = 'approved'
     )
   );
 end;
@@ -1360,6 +1403,69 @@ from public, anon, authenticated;
 
 grant execute on function
   public.debate_submission_counts(bigint)
+to authenticated;
+
+-- Officer-only participant confirmation.
+create function public.debate_confirm_participants(
+  p_agenda_id bigint
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_stage text;
+  v_confirmed_at timestamptz;
+  v_participant_count bigint;
+begin
+  if public.is_approved() is not true
+     or public.is_officer() is not true then
+    raise exception 'Officer permission required';
+  end if;
+
+  select stage, participants_confirmed_at
+  into v_stage, v_confirmed_at
+  from public.debate_sessions
+  where agenda_id = p_agenda_id
+  for update;
+
+  if not found then
+    raise exception 'Debate session not found';
+  end if;
+
+  if v_stage is distinct from 'pre' then
+    raise exception 'Participant list cannot be confirmed at this stage';
+  end if;
+
+  if v_confirmed_at is not null then
+    raise exception 'Participant list is already confirmed';
+  end if;
+
+  select count(*)
+  into v_participant_count
+  from public.debate_participants dp
+  join public.profiles p on p.id = dp.user_id
+  where dp.agenda_id = p_agenda_id
+    and p.status = 'approved';
+
+  if v_participant_count < 4 then
+    raise exception 'At least four approved participants are required';
+  end if;
+
+  update public.debate_sessions
+  set participants_confirmed_at = now(),
+      updated_at = now()
+  where agenda_id = p_agenda_id;
+end;
+$$;
+
+revoke all on function
+  public.debate_confirm_participants(bigint)
+from public, anon, authenticated;
+
+grant execute on function
+  public.debate_confirm_participants(bigint)
 to authenticated;
 
 commit;
@@ -1390,6 +1496,7 @@ commit;
 -- drop function if exists public.debate_capture_results();
 -- drop function if exists public.debate_submit_pre(bigint, text, text);
 -- drop function if exists public.debate_submit_post(bigint, text, text, text);
+-- drop function if exists public.debate_confirm_participants(bigint);
 -- drop function if exists public.debate_add_participant(bigint, uuid);
 -- drop function if exists public.debate_remove_participant(bigint, uuid);
 -- drop function if exists public.debate_advance_stage(bigint, text);
